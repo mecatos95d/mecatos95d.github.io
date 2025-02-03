@@ -3,115 +3,338 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>React with Multiple Time Inputs and localStorage</title>
+        <title>MMA - Manager of Multiple Alarms</title>
         <script
-            src="https://unpkg.com/react@17/umd/react.development.js"
+            src="https://unpkg.com/react@17/umd/react.production.min.js"
             crossorigin
         ></script>
         <script
-            src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"
+            src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"
             crossorigin
         ></script>
         <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/react-modal@3.14.3/dist/react-modal.min.js"></script>
+
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #f4f7fc;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                justify-content: center;
+                align-items: start;
+                height: 100vh;
+            }
+
+            h1 {
+                text-align: center;
+                font-size: 1.8rem;
+                color: #333;
+            }
+
+            h2 {
+                font-size: 1.2rem;
+                color: #333;
+            }
+
+            h3 {
+                font-size: 1rem;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+
+                span {
+                    width: 25%;
+                }
+            }
+
+            .time-item {
+                width: 100%;
+            }
+
+            p {
+                color: #666;
+            }
+
+            button {
+                background-color: #4caf50;
+                color: white;
+                padding: 10px 15px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: background-color 0.3s ease;
+                font-size: 1rem;
+            }
+
+            button:hover {
+                background-color: #45a049;
+            }
+
+            button:disabled {
+                background-color: #ccc;
+                cursor: not-allowed;
+            }
+
+            ul {
+                list-style-type: none;
+                padding: 0;
+            }
+
+            li {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0px 10px 5px;
+                background-color: #fff;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+            }
+
+            li button {
+                background-color: #f44336;
+                padding: 5px 10px;
+                font-size: 0.9rem;
+            }
+
+            li button:hover {
+                background-color: #e53935;
+            }
+
+            .modal-content {
+                padding: 20px;
+                background-color: #fff;
+                border-radius: 5px;
+            }
+
+            .modal-header h2 {
+                margin-top: 0;
+                font-size: 1.5rem;
+            }
+
+            .modal-body {
+                label {
+                    font-size: 1rem;
+                    margin-bottom: 10px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    width: 100%;
+                }
+
+                input {
+                    width: 70%;
+                }
+
+                input[type="number"] {
+                    width: 20%;
+                }
+            }
+
+            .modal-footer {
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+            }
+        </style>
     </head>
     <body>
         <div id="root"></div>
-
         <script type="text/babel">
             const { useState, useEffect } = React;
             const Modal = window.ReactModal;
 
+            function formatDateTime(date) {
+                let [day, hours, minutes] = ["Date", "Hours", "Minutes"].map(
+                    (fn) =>
+                        date?.["get" + fn]?.()?.toString()?.padStart(2, "0") ??
+                        "--"
+                );
+
+                return `DAY ${day} | ${hours}:${minutes}`;
+            }
+
+            // TimeItem 컴포넌트 - 각 시간 항목을 표시하는 컴포넌트
+            function TimeItem({ time, itemFn, index }) {
+                return (
+                    <div className="time-item">
+                        <h3>
+                            <span>{time}</span>
+                            <span>{time?.game ?? ""}</span>
+                            <span>{time?.memo ?? ""}</span>
+                            <span>{(time?.h || time?.m) ?? "00:00"}</span>
+                        </h3>
+                        <div className="modal-footer">
+                            {["Edit", "Renew", "Delete"].map((e) => (
+                                <button onClick={itemFn(e)}>{e}</button>
+                            ))}
+                        </div>
+                    </div>
+                );
+            }
+
+            // Modal 컴포넌트 - 시간 입력을 위한 모달
+            function TimeModal({ idx, onClose, onSubmit }) {
+                const [obj, setObj] = useState({
+                    game: "",
+                    memo: "",
+                    h: 0,
+                    m: 0,
+                });
+                // 시간 입력값 상태 변경
+                const updateObj = (k) => (e) =>
+                    setObj((o) => {
+                        return {
+                            ...o,
+                            [k]: e.target.value,
+                        };
+                    });
+
+                return (
+                    <Modal
+                        isOpen={idx > -2}
+                        onRequestClose={onClose} // 모달 닫기
+                        contentLabel="Add Time Modal"
+                        ariaHideApp={false} // a11y 오류 방지
+                    >
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h2>Enter Time</h2>
+                            </div>
+                            <div className="modal-body">
+                                <div className="text-input">
+                                    {["game", "memo"].map((e) => (
+                                        <label>
+                                            {e}
+                                            <input
+                                                value={obj[e]}
+                                                onChange={updateObj(e)}
+                                            />
+                                        </label>
+                                    ))}
+                                </div>
+                                <label>
+                                    {[
+                                        ["+", "h"],
+                                        [":", "m"],
+                                    ].map(([a, b]) => (
+                                        <>
+                                            {a}
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                max={99}
+                                                value={obj[b]}
+                                                onChange={updateObj(b)}
+                                            />
+                                        </>
+                                    ))}
+                                    {"| +11d 23:59"}
+                                </label>
+                            </div>
+                            <div className="modal-footer">
+                                <button
+                                    onClick={onSubmit}
+                                    disabled={!(obj.h || obj.m)}
+                                >
+                                    {idx === -1 ? "Add" : "Update"} Time
+                                </button>
+                                <button onClick={onClose}>Cancel</button>
+                            </div>
+                        </div>
+                    </Modal>
+                );
+            }
+
             function App() {
-                const [time, setTime] = useState("");
+                const [updatedPrev, setUpdatedPrev] = useState();
+                const [updated, setUpdated] = useState(
+                    localStorage.getItem("updated")
+                );
                 const [times, setTimes] = useState(() => {
                     const savedTimes = localStorage.getItem("times");
                     return savedTimes ? JSON.parse(savedTimes) : [];
                 });
-                const [isModalOpen, setIsModalOpen] = useState(false);
-
-                // 시간 입력값 상태 변경
-                const handleTimeChange = (e) => {
-                    setTime(e.target.value);
-                };
+                const [mdIdx, setMdIdx] = useState(-2);
 
                 // 시간을 추가하는 함수
-                const handleAddTime = () => {
+                const updateTime = () => {
                     if (time) {
                         const newTimes = [...times, time];
                         setTimes(newTimes);
                         localStorage.setItem("times", JSON.stringify(newTimes));
                         setTime("");
-                        setIsModalOpen(false); // 모달 닫기
+                        setMdIdx(-2);
                     }
                 };
 
-                // 시간을 삭제하는 함수
-                const handleDeleteTime = (index) => {
-                    const newTimes = times.filter((_, i) => i !== index);
-                    setTimes(newTimes);
-                    localStorage.setItem("times", JSON.stringify(newTimes));
-                };
+                function updateNow() {
+                    const dt = new Date();
+                    setUpdatedPrev(updated);
+                    setUpdated(dt);
+                    localStorage.setItem("updated", dt);
+                }
+
+                function manageTime(idx) {
+                    return (opt) => {
+                        switch (opt) {
+                            case "Edit":
+                                setMdIdx(idx);
+                                return;
+                            case "Renew":
+                                return;
+                            case "Delete":
+                                const newTimes = times.filter(
+                                    (_, i) => i !== idx
+                                );
+                                setTimes(newTimes);
+                                localStorage.setItem(
+                                    "times",
+                                    JSON.stringify(newTimes)
+                                );
+                                return;
+                        }
+                    };
+                }
 
                 return (
                     <div>
-                        <h1>
-                            Multiple Time Input Example with React,
-                            localStorage, and React Modal
-                        </h1>
+                        <h1>Manager of Multiple Alarms</h1>
+                        <h2>Last Updated @</h2>
+                        <h3>
+                            {formatDateTime(updated)}
+                            {updatedPrev && "<<<" + formatDateTime(updatedPrev)}
+                            <button onClick={updateNow}>Update Now</button>
+                        </h3>
 
                         {/* 시간 목록 출력 */}
                         <h2>Saved Times</h2>
-                        {times.length === 0 ? (
-                            <p>No times saved yet.</p>
-                        ) : (
-                            <ul>
-                                {times.map((t, index) => (
-                                    <li key={index}>
-                                        {t}
-                                        <button
-                                            onClick={() =>
-                                                handleDeleteTime(index)
-                                            }
-                                        >
-                                            Delete
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
+                        <ul>
+                            {times.map((t, index) => (
+                                <li key={index}>
+                                    <TimeItem
+                                        time={t}
+                                        itemFn={manageTime(index)}
+                                    />
+                                </li>
+                            ))}
+                        </ul>
 
                         {/* "Add Time" 버튼 클릭 시 모달 열기 */}
-                        <button onClick={() => setIsModalOpen(true)}>
-                            Add Time
-                        </button>
+                        <button onClick={() => setMdIdx(-1)}>Add Time</button>
 
-                        {/* Modal */}
-                        <Modal
-                            isOpen={isModalOpen}
-                            onRequestClose={() => setIsModalOpen(false)} // 모달 닫기
-                            contentLabel="Add Time Modal"
-                            ariaHideApp={false} // a11y 오류 방지
-                        >
-                            <h2>Enter Time</h2>
-                            <label>
-                                Time:
-                                <input
-                                    type="time"
-                                    value={time}
-                                    onChange={handleTimeChange}
-                                />
-                            </label>
-                            <button onClick={handleAddTime}>Add Time</button>
-                            <button onClick={() => setIsModalOpen(false)}>
-                                Cancel
-                            </button>
-                        </Modal>
+                        {/* Modal 컴포넌트 호출 */}
+                        <TimeModal
+                            idx={mdIdx}
+                            onClose={() => setMdIdx(-2)}
+                            onSubmit={updateTime}
+                        />
                     </div>
                 );
             }
 
-            // React 컴포넌트를 #root div에 렌더링
             ReactDOM.render(<App />, document.getElementById("root"));
         </script>
     </body>
