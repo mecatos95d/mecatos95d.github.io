@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>React with Multiple Time Inputs and localStorage</title>
+        <script
+            src="https://unpkg.com/react@17/umd/react.development.js"
+            crossorigin
+        ></script>
+        <script
+            src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"
+            crossorigin
+        ></script>
+        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/react-modal@3.14.3/dist/react-modal.min.js"></script>
+    </head>
+    <body>
+        <div id="root"></div>
+
+        <script type="text/babel">
+            const { useState, useEffect } = React;
+            const Modal = window.ReactModal;
+
+            function App() {
+                const [time, setTime] = useState("");
+                const [times, setTimes] = useState(() => {
+                    const savedTimes = localStorage.getItem("times");
+                    return savedTimes ? JSON.parse(savedTimes) : [];
+                });
+                const [isModalOpen, setIsModalOpen] = useState(false);
+
+                // 시간 입력값 상태 변경
+                const handleTimeChange = (e) => {
+                    setTime(e.target.value);
+                };
+
+                // 시간을 추가하는 함수
+                const handleAddTime = () => {
+                    if (time) {
+                        const newTimes = [...times, time];
+                        setTimes(newTimes);
+                        localStorage.setItem("times", JSON.stringify(newTimes));
+                        setTime("");
+                        setIsModalOpen(false); // 모달 닫기
+                    }
+                };
+
+                // 시간을 삭제하는 함수
+                const handleDeleteTime = (index) => {
+                    const newTimes = times.filter((_, i) => i !== index);
+                    setTimes(newTimes);
+                    localStorage.setItem("times", JSON.stringify(newTimes));
+                };
+
+                return (
+                    <div>
+                        <h1>
+                            Multiple Time Input Example with React,
+                            localStorage, and React Modal
+                        </h1>
+
+                        {/* 시간 목록 출력 */}
+                        <h2>Saved Times</h2>
+                        {times.length === 0 ? (
+                            <p>No times saved yet.</p>
+                        ) : (
+                            <ul>
+                                {times.map((t, index) => (
+                                    <li key={index}>
+                                        {t}
+                                        <button
+                                            onClick={() =>
+                                                handleDeleteTime(index)
+                                            }
+                                        >
+                                            Delete
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+
+                        {/* "Add Time" 버튼 클릭 시 모달 열기 */}
+                        <button onClick={() => setIsModalOpen(true)}>
+                            Add Time
+                        </button>
+
+                        {/* Modal */}
+                        <Modal
+                            isOpen={isModalOpen}
+                            onRequestClose={() => setIsModalOpen(false)} // 모달 닫기
+                            contentLabel="Add Time Modal"
+                            ariaHideApp={false} // a11y 오류 방지
+                        >
+                            <h2>Enter Time</h2>
+                            <label>
+                                Time:
+                                <input
+                                    type="time"
+                                    value={time}
+                                    onChange={handleTimeChange}
+                                />
+                            </label>
+                            <button onClick={handleAddTime}>Add Time</button>
+                            <button onClick={() => setIsModalOpen(false)}>
+                                Cancel
+                            </button>
+                        </Modal>
+                    </div>
+                );
+            }
+
+            // React 컴포넌트를 #root div에 렌더링
+            ReactDOM.render(<App />, document.getElementById("root"));
+        </script>
+    </body>
+</html>
