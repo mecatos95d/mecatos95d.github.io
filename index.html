@@ -5,11 +5,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>MMA - Manager of Multiple Alarms</title>
         <script
-            src="https://unpkg.com/react@17/umd/react.production.min.js"
+            src="https://unpkg.com/react@18/umd/react.production.min.js"
             crossorigin
         ></script>
         <script
-            src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"
+            src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
             crossorigin
         ></script>
         <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -67,13 +67,13 @@
                 cursor: pointer;
                 transition: background-color 0.3s ease;
                 font-size: 1rem;
+            }
 
-                &.preset {
-                    background-color: lightblue;
-                    padding: 5px;
-                    border-radius: 3px;
-                    margin: 0px 3px;
-                }
+            button.preset {
+                background-color: lightblue;
+                padding: 5px;
+                border-radius: 3px;
+                margin: 0px 3px;
             }
 
             button:hover {
@@ -128,9 +128,12 @@
                 border-radius: 5px;
             }
 
-            .modal-header h2 {
-                margin-top: 0;
-                font-size: 1.5rem;
+            .modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px;
+                border-bottom: 1px solid #ddd;
             }
 
             .modal-body {
@@ -141,6 +144,12 @@
                     align-items: center;
                     justify-content: space-between;
                     width: 100%;
+                }
+
+                .text-input {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
                 }
 
                 .dest {
@@ -170,6 +179,9 @@
         <script type="text/babel">
             const { useState, useEffect } = React;
             const Modal = window.ReactModal;
+
+            const MODAL_OFF = -2;
+            const MODAL_NEW = -1;
 
             function addTime(x) {
                 const now = new Date();
@@ -204,7 +216,6 @@
                 }
             }
 
-            // TimeItem 컴포넌트 - 각 시간 항목을 표시하는 컴포넌트
             function TimeItem({ time, itemFn }) {
                 return (
                     <div className="time-item">
@@ -254,14 +265,18 @@
 
                 return (
                     <Modal
-                        isOpen={idx > -2}
+                        isOpen={idx > MODAL_OFF}
                         onRequestClose={onClose} // 모달 닫기
                         contentLabel="Add Time Modal"
                         ariaHideApp={false} // a11y 오류 방지
                     >
                         <div className="modal-content">
                             <div className="modal-header">
-                                <h2>{idx > -1 ? "Edit #" + idx : "Add new"}</h2>
+                                <h2>
+                                    {idx > MODAL_NEW
+                                        ? "Edit #" + idx
+                                        : "Add new"}
+                                </h2>
                             </div>
                             <div className="modal-body">
                                 <div className="text-input">
@@ -326,7 +341,7 @@
                                     }}
                                     disabled={!(obj.h || obj.m)}
                                 >
-                                    {idx === -1 ? "Add" : "Update"} Time
+                                    {idx === MODAL_NEW ? "Add" : "Update"} Time
                                 </button>
                                 <button onClick={onClose}>Cancel</button>
                             </div>
@@ -344,15 +359,23 @@
                     const savedTimes = localStorage.getItem("times");
                     return savedTimes ? JSON.parse(savedTimes) : [];
                 });
-                const [mdIdx, setMdIdx] = useState(-2);
+                const [mdIdx, setMdIdx] = useState(MODAL_OFF);
+
+                useEffect(() => {
+                    localStorage.setItem("updated", updated.toISOString());
+                }, [updated]);
+
+                function updateTimes(newTimes) {
+                    setTimes(newTimes);
+                    localStorage.setItem("times", JSON.stringify(newTimes));
+                }
 
                 function updateTime(time, idx = mdIdx) {
                     const newTimes = [...times];
-                    if (idx === -1) newTimes.push(time);
+                    if (idx === MODAL_NEW) newTimes.push(time);
                     else newTimes[idx] = time;
-                    setTimes(newTimes);
-                    localStorage.setItem("times", JSON.stringify(newTimes));
-                    setMdIdx(-2);
+                    updateTimes(newTimes);
+                    setMdIdx(MODAL_OFF);
                 }
 
                 function updateNow() {
@@ -360,18 +383,15 @@
                     if (dt - updated < 100000) return; // 100s
                     setUpdatedPrev(updated);
                     setUpdated(dt);
-                    localStorage.setItem("updated", dt);
                 }
 
                 function getState(t) {
-                    const dst =
-                        typeof t.dest === "string" ? new Date(t.dest) : t.dest;
+                    const dst = new Date(t.dest);
 
                     if (dst < updated)
-                        return updatedPrev && dst > updatedPrev
-                            ? "pass"
-                            : "inactive";
-                    else return undefined;
+                        // updatedPrev = undef then false
+                        return dst > updatedPrev ? "pass" : "inactive";
+                    return undefined;
                 }
 
                 const manageTime = (idx) => (opt) => {
@@ -386,11 +406,7 @@
                             return;
                         case "Delete":
                             const newTimes = times.filter((_, i) => i !== idx);
-                            setTimes(newTimes);
-                            localStorage.setItem(
-                                "times",
-                                JSON.stringify(newTimes)
-                            );
+                            updateTimes(newTimes);
                             return;
                     }
                 };
@@ -425,15 +441,15 @@
                             ))}
                         </ul>
 
-                        {/* "Add Time" 버튼 클릭 시 모달 열기 */}
-                        <button onClick={() => setMdIdx(-1)}>Add Time</button>
+                        <button onClick={() => setMdIdx(MODAL_NEW)}>
+                            Add Time
+                        </button>
 
-                        {/* Modal 컴포넌트 호출 */}
-                        {mdIdx > -2 && (
+                        {mdIdx > MODAL_OFF && (
                             <TimeModal
                                 idx={mdIdx}
                                 init={times[mdIdx]}
-                                onClose={() => setMdIdx(-2)}
+                                onClose={() => setMdIdx(MODAL_OFF)}
                                 onSubmit={updateTime}
                             />
                         )}
