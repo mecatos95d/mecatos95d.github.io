@@ -98,6 +98,14 @@
                 background-color: #fff;
                 border: 1px solid #ddd;
                 border-radius: 5px;
+
+                &[state="pass"] {
+                    background-color: #afa;
+                }
+
+                &[state="inactive"] {
+                    background-color: #bbb;
+                }
             }
 
             li button {
@@ -197,7 +205,7 @@
             }
 
             // TimeItem 컴포넌트 - 각 시간 항목을 표시하는 컴포넌트
-            function TimeItem({ time, itemFn, index }) {
+            function TimeItem({ time, itemFn }) {
                 return (
                     <div className="time-item">
                         <h3>
@@ -330,7 +338,7 @@
             function App() {
                 const [updatedPrev, setUpdatedPrev] = useState();
                 const [updated, setUpdated] = useState(
-                    localStorage.getItem("updated")
+                    new Date(localStorage.getItem("updated"))
                 );
                 const [times, setTimes] = useState(() => {
                     const savedTimes = localStorage.getItem("times");
@@ -353,6 +361,17 @@
                     setUpdatedPrev(updated);
                     setUpdated(dt);
                     localStorage.setItem("updated", dt);
+                }
+
+                function getState(t) {
+                    const dst =
+                        typeof t.dest === "string" ? new Date(t.dest) : t.dest;
+
+                    if (dst < updated)
+                        return updatedPrev && dst > updatedPrev
+                            ? "pass"
+                            : "inactive";
+                    else return undefined;
                 }
 
                 const manageTime = (idx) => (opt) => {
@@ -397,7 +416,7 @@
                         <h2>Saved Times</h2>
                         <ul>
                             {times.map((t, index) => (
-                                <li key={index}>
+                                <li key={index} state={getState(t)}>
                                     <TimeItem
                                         time={t}
                                         itemFn={manageTime(index)}
