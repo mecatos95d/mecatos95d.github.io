@@ -20,7 +20,7 @@
                 font-family: Arial, sans-serif;
                 background-color: #f4f7fc;
                 margin: 0;
-                padding: 0;
+                padding: 10px;
                 display: flex;
                 justify-content: center;
                 align-items: start;
@@ -124,6 +124,11 @@
                     width: 100%;
                 }
 
+                .dest {
+                    text-align: end;
+                    width: 4.5rem;
+                }
+
                 input {
                     width: 70%;
                 }
@@ -146,14 +151,37 @@
             const { useState, useEffect } = React;
             const Modal = window.ReactModal;
 
-            function formatDateTime(date) {
-                let [day, hours, minutes] = ["Date", "Hours", "Minutes"].map(
-                    (fn) =>
-                        date?.["get" + fn]?.()?.toString()?.padStart(2, "0") ??
-                        "--"
-                );
+            function addTime(x) {
+                const now = new Date();
+                now.setHours(now.getHours() + x.h);
+                now.setMinutes(now.getMinutes() + x.m);
+                now.setSeconds(0);
+                x.dest = now;
+            }
 
-                return `DAY ${day} | ${hours}:${minutes}`;
+            function pad(e) {
+                return e?.toString()?.padStart(2, "0") ?? "--";
+            }
+
+            function format(date, v = 0) {
+                if (typeof date === "string") date = new Date(date);
+                let [day, hours, minutes] = ["Date", "Hours", "Minutes"].map(
+                    (fn) => pad(date?.["get" + fn]?.())
+                );
+                let dayDiff = date?.getDate() - new Date().getDate();
+
+                switch (v) {
+                    case 0:
+                        return `DAY ${day} | ${hours}:${minutes}`;
+                    case 1:
+                        return `${
+                            dayDiff > 0 ? `+${dayDiff}d ` : ""
+                        }${hours}:${minutes}`;
+                    case 2:
+                        return `${
+                            dayDiff < 0 ? `-${-dayDiff}d ` : ""
+                        }${hours}:${minutes}`;
+                }
             }
 
             // TimeItem 컴포넌트 - 각 시간 항목을 표시하는 컴포넌트
@@ -161,14 +189,16 @@
                 return (
                     <div className="time-item">
                         <h3>
-                            <span>{time}</span>
+                            <span>{format(time?.dest, 1)}</span>
                             <span>{time?.game ?? ""}</span>
                             <span>{time?.memo ?? ""}</span>
-                            <span>{(time?.h || time?.m) ?? "00:00"}</span>
+                            <span>
+                                {pad(time?.h)}:{pad(time?.m)}
+                            </span>
                         </h3>
                         <div className="modal-footer">
                             {["Edit", "Renew", "Delete"].map((e) => (
-                                <button onClick={itemFn(e)}>{e}</button>
+                                <button onClick={() => itemFn(e)}>{e}</button>
                             ))}
                         </div>
                     </div>
@@ -182,15 +212,23 @@
                     memo: "",
                     h: 0,
                     m: 0,
+                    dest: new Date(),
                 });
-                // 시간 입력값 상태 변경
-                const updateObj = (k) => (e) =>
+
+                const updateObj = (k) => (e) => {
+                    let v = e.target.value;
+                    if (["h", "m"].includes(k))
+                        v = Math.max(0, Math.min(99, Number(v)));
+
                     setObj((o) => {
-                        return {
+                        const r = {
                             ...o,
-                            [k]: e.target.value,
+                            [k]: v,
                         };
+                        addTime(r);
+                        return r;
                     });
+                };
 
                 return (
                     <Modal
@@ -231,12 +269,17 @@
                                             />
                                         </>
                                     ))}
-                                    {"| +11d 23:59"}
+                                    <div className="dest">
+                                        {format(obj.dest, 1)}
+                                    </div>
                                 </label>
                             </div>
                             <div className="modal-footer">
                                 <button
-                                    onClick={onSubmit}
+                                    onClick={() => {
+                                        onSubmit(obj);
+                                        onClose();
+                                    }}
                                     disabled={!(obj.h || obj.m)}
                                 >
                                     {idx === -1 ? "Add" : "Update"} Time
@@ -259,53 +302,58 @@
                 });
                 const [mdIdx, setMdIdx] = useState(-2);
 
-                // 시간을 추가하는 함수
-                const updateTime = () => {
-                    if (time) {
-                        const newTimes = [...times, time];
-                        setTimes(newTimes);
-                        localStorage.setItem("times", JSON.stringify(newTimes));
-                        setTime("");
-                        setMdIdx(-2);
-                    }
-                };
+                function updateTime(time, idx = mdIdx) {
+                    const newTimes = [...times];
+                    if (idx === -1) newTimes.push(time);
+                    else newTimes[idx] = time;
+                    setTimes(newTimes);
+                    localStorage.setItem("times", JSON.stringify(newTimes));
+                    setMdIdx(-2);
+                }
 
                 function updateNow() {
                     const dt = new Date();
+                    if (dt - updated < 100000) return; // 100s
                     setUpdatedPrev(updated);
                     setUpdated(dt);
                     localStorage.setItem("updated", dt);
                 }
 
-                function manageTime(idx) {
-                    return (opt) => {
-                        switch (opt) {
-                            case "Edit":
-                                setMdIdx(idx);
-                                return;
-                            case "Renew":
-                                return;
-                            case "Delete":
-                                const newTimes = times.filter(
-                                    (_, i) => i !== idx
-                                );
-                                setTimes(newTimes);
-                                localStorage.setItem(
-                                    "times",
-                                    JSON.stringify(newTimes)
-                                );
-                                return;
-                        }
-                    };
-                }
+                const manageTime = (idx) => (opt) => {
+                    switch (opt) {
+                        case "Edit":
+                            setMdIdx(idx);
+                            return;
+                        case "Renew":
+                            const time = { ...times[idx] };
+                            addTime(time);
+                            updateTime(time, idx);
+                            return;
+                        case "Delete":
+                            const newTimes = times.filter((_, i) => i !== idx);
+                            setTimes(newTimes);
+                            localStorage.setItem(
+                                "times",
+                                JSON.stringify(newTimes)
+                            );
+                            return;
+                    }
+                };
 
                 return (
                     <div>
                         <h1>Manager of Multiple Alarms</h1>
                         <h2>Last Updated @</h2>
                         <h3>
-                            {formatDateTime(updated)}
-                            {updatedPrev && "<<<" + formatDateTime(updatedPrev)}
+                            {format(updated)}
+                            {updatedPrev && (
+                                <>
+                                    {format(updatedPrev, 2).length > 5 && (
+                                        <br />
+                                    )}
+                                    {"⇐ " + format(updatedPrev, 2)}
+                                </>
+                            )}
                             <button onClick={updateNow}>Update Now</button>
                         </h3>
 
@@ -326,11 +374,13 @@
                         <button onClick={() => setMdIdx(-1)}>Add Time</button>
 
                         {/* Modal 컴포넌트 호출 */}
-                        <TimeModal
-                            idx={mdIdx}
-                            onClose={() => setMdIdx(-2)}
-                            onSubmit={updateTime}
-                        />
+                        {mdIdx > -2 && (
+                            <TimeModal
+                                idx={mdIdx}
+                                onClose={() => setMdIdx(-2)}
+                                onSubmit={updateTime}
+                            />
+                        )}
                     </div>
                 );
             }
