@@ -2,7 +2,10 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0 maximum-scale=1, user-scalable=no"
+        />
         <title>MMA - Manager of Multiple Alarms</title>
         <script
             src="https://unpkg.com/react@18/umd/react.production.min.js"
@@ -73,7 +76,7 @@
                 background-color: lightblue;
                 padding: 5px;
                 border-radius: 3px;
-                margin: 0px 3px;
+                margin: 3px;
             }
 
             button:hover {
@@ -183,16 +186,24 @@
             const MODAL_OFF = -2;
             const MODAL_NEW = -1;
 
+            const BUTTON_PRESET = [
+                { h: 3, m: 0 },
+                { h: 4, m: 0 },
+                { h: 5, m: 0 },
+                { h: 8, m: 48 },
+                { h: 16, m: 0 },
+            ];
+
+            const pad = (e) => e?.toString()?.padStart(2, "0") ?? "--";
+            const pad2 = (e) => `${pad(e?.h)}:${pad(e?.m)}`;
+
             function addTime(x) {
                 const now = new Date();
                 now.setHours(now.getHours() + x.h);
                 now.setMinutes(now.getMinutes() + x.m);
                 now.setSeconds(0);
                 x.dest = now;
-            }
-
-            function pad(e) {
-                return e?.toString()?.padStart(2, "0") ?? "--";
+                return true;
             }
 
             function format(date, v = 0) {
@@ -223,9 +234,7 @@
                             <span>{format(time?.dest, 1)}</span>
                             <span>{time?.game ?? ""}</span>
                             <span>{time?.memo ?? ""}</span>
-                            <span>
-                                {pad(time?.h)}:{pad(time?.m)}
-                            </span>
+                            <span>{pad2(time)}</span>
                         </h3>
                         <div className="modal-footer">
                             {["Edit", "Renew", "Delete"].map((e) => (
@@ -236,8 +245,8 @@
                 );
             }
 
-            // Modal 컴포넌트 - 시간 입력을 위한 모달
             function TimeModal({ idx, init, onClose, onSubmit }) {
+                const [updated, setUpdated] = useState(false);
                 const [obj, setObj] = useState(
                     init ?? {
                         game: "",
@@ -248,25 +257,28 @@
                     }
                 );
 
-                const updateObj = (k) => (e) => {
-                    let v = e.target.value;
-                    if (["h", "m"].includes(k))
-                        v = Math.max(0, Math.min(99, Number(v)));
-
+                function updateObjKey(e) {
                     setObj((o) => {
                         const r = {
                             ...o,
-                            [k]: v,
+                            ...e,
                         };
-                        addTime(r);
+                        setUpdated(addTime(r));
                         return r;
                     });
+                }
+
+                const updateObj = (k) => (e) => {
+                    let v = e.target.value;
+                    if ([..."hm"].includes(k))
+                        v = Math.max(0, Math.min(59, Number(v)));
+                    updateObjKey({ [k]: v });
                 };
 
                 return (
                     <Modal
                         isOpen={idx > MODAL_OFF}
-                        onRequestClose={onClose} // 모달 닫기
+                        onRequestClose={onClose}
                         contentLabel="Add Time Modal"
                         ariaHideApp={false} // a11y 오류 방지
                     >
@@ -291,16 +303,13 @@
                                     ))}
                                 </div>
                                 <label>
-                                    {[
-                                        ["+", "h"],
-                                        [":", "m"],
-                                    ].map(([a, b]) => (
+                                    {[[..."+h"], [...":m"]].map(([a, b]) => (
                                         <>
                                             {a}
                                             <input
                                                 type="number"
                                                 min={0}
-                                                max={99}
+                                                max={59}
                                                 value={obj[b]}
                                                 onChange={updateObj(b)}
                                             />
@@ -312,34 +321,18 @@
                                 </label>
                             </div>
                             Presets
-                            {[
-                                [4, 0],
-                                [8, 48],
-                                [16, 0],
-                            ].map((e) => (
+                            {BUTTON_PRESET.map((e) => (
                                 <button
                                     className="preset"
-                                    onClick={() => {
-                                        const hm = { h: e[0], m: e[1] };
-                                        addTime(hm);
-                                        setObj((o) => {
-                                            return {
-                                                ...o,
-                                                ...hm,
-                                            };
-                                        });
-                                    }}
-                                >
-                                    {pad(e[0])}:{pad(e[1])}
-                                </button>
+                                    children={pad2(e)}
+                                    key={pad2(e)}
+                                    onClick={() => updateObjKey(e)}
+                                />
                             ))}
                             <div className="modal-footer">
                                 <button
-                                    onClick={() => {
-                                        onSubmit(obj);
-                                        onClose();
-                                    }}
-                                    disabled={!(obj.h || obj.m)}
+                                    onClick={() => onSubmit(obj)}
+                                    disabled={!updated}
                                 >
                                     {idx === MODAL_NEW ? "Add" : "Update"} Time
                                 </button>
