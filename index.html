@@ -67,6 +67,13 @@
                 cursor: pointer;
                 transition: background-color 0.3s ease;
                 font-size: 1rem;
+
+                &.preset {
+                    background-color: lightblue;
+                    padding: 5px;
+                    border-radius: 3px;
+                    margin: 0px 3px;
+                }
             }
 
             button:hover {
@@ -101,6 +108,10 @@
 
             li button:hover {
                 background-color: #e53935;
+            }
+
+            .ReactModal__Content {
+                max-width: 300px;
             }
 
             .modal-content {
@@ -141,6 +152,7 @@
             .modal-footer {
                 display: flex;
                 justify-content: flex-end;
+                margin-top: 10px;
                 gap: 10px;
             }
         </style>
@@ -206,14 +218,16 @@
             }
 
             // Modal 컴포넌트 - 시간 입력을 위한 모달
-            function TimeModal({ idx, onClose, onSubmit }) {
-                const [obj, setObj] = useState({
-                    game: "",
-                    memo: "",
-                    h: 0,
-                    m: 0,
-                    dest: new Date(),
-                });
+            function TimeModal({ idx, init, onClose, onSubmit }) {
+                const [obj, setObj] = useState(
+                    init ?? {
+                        game: "",
+                        memo: "",
+                        h: 0,
+                        m: 0,
+                        dest: new Date(),
+                    }
+                );
 
                 const updateObj = (k) => (e) => {
                     let v = e.target.value;
@@ -239,7 +253,7 @@
                     >
                         <div className="modal-content">
                             <div className="modal-header">
-                                <h2>Enter Time</h2>
+                                <h2>{idx > -1 ? "Edit #" + idx : "Add new"}</h2>
                             </div>
                             <div className="modal-body">
                                 <div className="text-input">
@@ -274,6 +288,28 @@
                                     </div>
                                 </label>
                             </div>
+                            Presets
+                            {[
+                                [4, 0],
+                                [8, 48],
+                                [16, 0],
+                            ].map((e) => (
+                                <button
+                                    className="preset"
+                                    onClick={() => {
+                                        const hm = { h: e[0], m: e[1] };
+                                        addTime(hm);
+                                        setObj((o) => {
+                                            return {
+                                                ...o,
+                                                ...hm,
+                                            };
+                                        });
+                                    }}
+                                >
+                                    {pad(e[0])}:{pad(e[1])}
+                                </button>
+                            ))}
                             <div className="modal-footer">
                                 <button
                                     onClick={() => {
@@ -351,7 +387,7 @@
                                     {format(updatedPrev, 2).length > 5 && (
                                         <br />
                                     )}
-                                    {"⇐ " + format(updatedPrev, 2)}
+                                    {" ⇐ " + format(updatedPrev, 2)}
                                 </>
                             )}
                             <button onClick={updateNow}>Update Now</button>
@@ -377,6 +413,7 @@
                         {mdIdx > -2 && (
                             <TimeModal
                                 idx={mdIdx}
+                                init={times[mdIdx]}
                                 onClose={() => setMdIdx(-2)}
                                 onSubmit={updateTime}
                             />
