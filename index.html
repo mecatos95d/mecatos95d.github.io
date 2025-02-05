@@ -198,7 +198,7 @@
                 now.setMinutes(now.getMinutes() + x.m);
                 now.setSeconds(0);
                 x.dest = now;
-                return true;
+                return x.h || x.m;
             }
 
             function format(date, v = 0) {
@@ -230,11 +230,19 @@
                 const [modal, setMd] = useState(undefined);
                 const [field, setFd] = useState("");
 
-                const b64 = () => btoa(JSON.stringify(localStorage)); // Base64
+                const b64 = () =>
+                    btoa(
+                        unescape(
+                            encodeURIComponent(JSON.stringify(localStorage))
+                        )
+                    );
+                // Base64
                 function importD() {
                     try {
-                        Object.entries(JSON.parse(atob(field))).forEach(
-                            ([key, value]) => localStorage.setItem(key, value)
+                        Object.entries(
+                            JSON.parse(decodeURIComponent(escape(atob(field))))
+                        ).forEach(([key, value]) =>
+                            localStorage.setItem(key, value)
                         );
                         load();
                         alert("Imported successfully!");
