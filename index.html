@@ -19,6 +19,11 @@
         <script src="https://cdn.jsdelivr.net/npm/react-modal@3.14.3/dist/react-modal.min.js"></script>
 
         <style>
+            #root {
+                width: 100vw;
+                max-width: 500px;
+            }
+
             body {
                 font-family: Arial, sans-serif;
                 background-color: #f4f7fc;
@@ -28,7 +33,6 @@
                 justify-content: center;
                 align-items: start;
                 height: 100vh;
-                width: 100%;
             }
 
             h1 {
@@ -43,6 +47,7 @@
             }
 
             h3 {
+                line-height: 1;
                 font-size: 1rem;
                 display: flex;
                 align-items: center;
@@ -220,6 +225,10 @@
                         return `${
                             dayDiff < 0 ? `-${-dayDiff}d ` : ""
                         }${hours}:${minutes}`;
+                    case 3:
+                        return `${hours}:${minutes}${
+                            new Date() - date >= 86400000 ? " (OLD)" : "" // 1d
+                        }`;
                 }
             }
 
@@ -389,21 +398,21 @@
                         case "⇓":
                             const idxN = idx + (opt === "⇑" ? -1 : 1);
                             if (idxN < 0 || idxN >= times.length) return;
-                            const copy = [...times];
-                            [copy[idx], copy[idxN]] = [copy[idxN], copy[idx]];
-                            updateTimes(copy);
+                            const ct = [...times];
+                            [ct[idx], ct[idxN]] = [ct[idxN], ct[idx]];
+                            updateTimes(ct);
                             return;
                         case "Edit":
                             setMdIdx(idx);
                             return;
                         case "Renew":
-                            const time = { ...times[idx] };
-                            addTime(time);
-                            updateTime(time, idx);
+                            const rt = { ...times[idx] };
+                            addTime(rt);
+                            updateTime(rt, idx);
                             return;
                         case "Delete":
-                            const newTimes = times.filter((_, i) => i !== idx);
-                            updateTimes(copy);
+                            const ft = times.filter((_, i) => i !== idx);
+                            updateTimes(ft);
                             return;
                     }
                 };
@@ -411,22 +420,21 @@
                 return (
                     <div>
                         <h1>Multiple Alarms</h1>
-                        <h2>Last Updated @</h2>
+                        {/* <h2>Last Updated</h2> */}
                         <h3>
                             {format(updated)}
-                            {updatedPrev && (
-                                <>
-                                    {format(updatedPrev, 2).length > 5 && (
-                                        <br />
-                                    )}
-                                    {" ⇐ " + format(updatedPrev, 2)}
-                                </>
-                            )}
+                            {
+                                updatedPrev && " ⇐ " + format(updatedPrev, 3)
+                                // <>
+                                //     {format(updatedPrev, 2).length > 5 && (
+                                //         <br />
+                                //     )}
+                                //     {" ⇐ " + format(updatedPrev, 2)}
+                                // </>
+                            }
                             <button onClick={updateNow}>Update Now</button>
                         </h3>
-
-                        {/* 시간 목록 출력 */}
-                        <h2>Saved Times</h2>
+                        {/* <h2>Saved Times</h2> */}
                         <ul>
                             {times.map((t, index) => (
                                 <li key={index} state={getState(t)}>
@@ -453,7 +461,6 @@
                     </div>
                 );
             }
-
             ReactDOM.render(<App />, document.getElementById("root"));
         </script>
     </body>
