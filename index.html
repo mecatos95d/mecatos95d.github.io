@@ -53,6 +53,7 @@
                 align-items: center;
                 justify-content: space-between;
                 width: 100%;
+                gap: 3px;
 
                 span {
                     width: 25%;
@@ -79,6 +80,7 @@
             }
 
             button.preset {
+                font-size: 0.9rem;
                 background-color: lightblue;
                 padding: 5px;
                 border-radius: 3px;
@@ -117,7 +119,8 @@
                 }
             }
 
-            li button {
+            li button,
+            .io button {
                 padding: 5px 10px;
                 font-size: 0.9rem;
             }
@@ -136,8 +139,6 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 10px;
-                border-bottom: 1px solid #ddd;
             }
 
             .modal-body {
@@ -153,7 +154,6 @@
                 .text-input {
                     display: flex;
                     flex-direction: column;
-                    gap: 10px;
                 }
 
                 .dest {
@@ -187,13 +187,7 @@
             const MODAL_OFF = -2;
             const MODAL_NEW = -1;
 
-            const BUTTON_PRESET = [
-                { h: 3, m: 0 },
-                { h: 4, m: 0 },
-                { h: 5, m: 0 },
-                { h: 8, m: 48 },
-                { h: 16, m: 0 },
-            ];
+            const BUTTON_PRESET = [100, 300, 400, 500, 848, 1600, 1900];
 
             const pad = (e) => e?.toString()?.padStart(2, "0") ?? "--";
             const pad2 = (e) => `${pad(e?.h)}:${pad(e?.m)}`;
@@ -227,9 +221,94 @@
                         }${hours}:${minutes}`;
                     case 3:
                         return `${hours}:${minutes}${
-                            new Date() - date >= 86400000 ? " (OLD)" : "" // 1d
+                            new Date() - date >= 86400000 ? " (OLD)" : "" // 1d = 86400000
                         }`;
                 }
+            }
+
+            function IO({ load }) {
+                const [modal, setMd] = useState(undefined);
+                const [field, setFd] = useState("");
+
+                const b64 = () => btoa(JSON.stringify(localStorage)); // Base64
+                function importD() {
+                    try {
+                        Object.entries(JSON.parse(atob(field))).forEach(
+                            ([key, value]) => localStorage.setItem(key, value)
+                        );
+                        load();
+                        alert("Imported successfully!");
+                        setMd(undefined);
+                    } catch (e) {
+                        alert("Failed to import...");
+                    }
+                }
+
+                useEffect(() => setFd(""), [modal]);
+
+                function onCopy() {
+                    navigator.clipboard
+                        .writeText(b64)
+                        .then(() => alert("Copied successfully!"))
+                        .catch((e) => alert("Failed to copy..."));
+                }
+
+                return (
+                    <div className="io modal-footer">
+                        <button onClick={() => setMd("Im")}>Import</button>
+                        <button onClick={() => setMd("Ex")}>Export</button>
+                        {modal && (
+                            <Modal
+                                isOpen
+                                onRequestClose={() => setMd(undefined)}
+                                contentLabel="IO Modal"
+                                ariaHideApp={false} // a11y 오류 방지
+                            >
+                                <div className="modal-content">
+                                    <div className="modal-header">
+                                        <h2>{`${modal}port`}</h2>
+                                    </div>
+                                    <div className="modal-body">
+                                        <h3>
+                                            <input
+                                                readonly={modal === "Ex"}
+                                                value={
+                                                    modal === "Ex"
+                                                        ? b64()
+                                                        : field
+                                                }
+                                                onChange={(e) =>
+                                                    setFd(e.target.value)
+                                                }
+                                            />
+                                            {modal === "Ex" && (
+                                                <div className="io">
+                                                    <button
+                                                        onClick={onCopy}
+                                                        children="Copy"
+                                                    />
+                                                </div>
+                                            )}
+                                        </h3>
+                                    </div>
+                                    <div className="modal-footer">
+                                        {modal === "Im" && (
+                                            <button
+                                                disabled={!field}
+                                                onClick={importD}
+                                                children="Import"
+                                            />
+                                        )}
+                                        <button
+                                            onClick={() => setMd(undefined)}
+                                            children="Cancel"
+                                        />
+                                    </div>
+                                </div>
+                            </Modal>
+                        )}
+                    </div>
+                );
             }
 
             function TimeItem({ time, itemFn }) {
@@ -324,16 +403,19 @@
                                         {format(obj.dest, 1)}
                                     </div>
                                 </label>
+                                Presets
+                                {BUTTON_PRESET.map((e) => {
+                                    const o = { h: (e / 100) | 0, m: e % 100 };
+                                    return (
+                                        <button
+                                            key={e}
+                                            className="preset"
+                                            children={pad2(o)}
+                                            onClick={() => updateObjKey(o)}
+                                        />
+                                    );
+                                })}
                             </div>
-                            Presets
-                            {BUTTON_PRESET.map((e) => (
-                                <button
-                                    className="preset"
-                                    children={pad2(e)}
-                                    key={pad2(e)}
-                                    onClick={() => updateObjKey(e)}
-                                />
-                            ))}
                             <div className="modal-footer">
                                 <button
                                     onClick={() => onSubmit(obj)}
@@ -353,11 +435,19 @@
                 const [updated, setUpdated] = useState(
                     new Date(localStorage.getItem("updated"))
                 );
-                const [times, setTimes] = useState(() => {
+                const [times, setTimes] = useState(loadTimes);
+                const [mdIdx, setMdIdx] = useState(MODAL_OFF);
+
+                function loadTimes() {
                     const savedTimes = localStorage.getItem("times");
                     return savedTimes ? JSON.parse(savedTimes) : [];
-                });
-                const [mdIdx, setMdIdx] = useState(MODAL_OFF);
+                }
+
+                function load() {
+                    setUpdatedPrev(undefined);
+                    setUpdated(new Date(localStorage.getItem("updated")));
+                    setTimes(loadTimes());
+                }
 
                 useEffect(() => {
                     localStorage.setItem("updated", updated.toISOString());
@@ -420,6 +510,7 @@
                 return (
                     <div>
                         <h1>Multiple Alarms</h1>
+                        <IO load={load} />
                         {/* <h2>Last Updated</h2> */}
                         <h3>
                             {format(updated)}
