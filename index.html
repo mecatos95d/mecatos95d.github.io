@@ -62,7 +62,7 @@
             }
 
             button {
-                background-color: #4caf50;
+                background-color: #59f;
                 color: white;
                 padding: 10px 15px;
                 border: none;
@@ -80,7 +80,7 @@
             }
 
             button:hover {
-                background-color: #45a049;
+                background-color: #48f;
             }
 
             button:disabled {
@@ -112,13 +112,8 @@
             }
 
             li button {
-                background-color: #f44336;
                 padding: 5px 10px;
                 font-size: 0.9rem;
-            }
-
-            li button:hover {
-                background-color: #e53935;
             }
 
             .ReactModal__Content {
@@ -237,7 +232,7 @@
                             <span>{pad2(time)}</span>
                         </h3>
                         <div className="modal-footer">
-                            {["Edit", "Renew", "Delete"].map((e) => (
+                            {["⇑", "⇓", "Edit", "Renew", "Delete"].map((e) => (
                                 <button onClick={() => itemFn(e)}>{e}</button>
                             ))}
                         </div>
@@ -389,6 +384,14 @@
 
                 const manageTime = (idx) => (opt) => {
                     switch (opt) {
+                        case "⇑":
+                        case "⇓":
+                            const idxN = idx + (opt === "⇑" ? -1 : 1);
+                            if (idxN < 0 || idxN >= times.length) return;
+                            const copy = [...times];
+                            [copy[idx], copy[idxN]] = [copy[idxN], copy[idx]];
+                            updateTimes(copy);
+                            return;
                         case "Edit":
                             setMdIdx(idx);
                             return;
@@ -399,7 +402,7 @@
                             return;
                         case "Delete":
                             const newTimes = times.filter((_, i) => i !== idx);
-                            updateTimes(newTimes);
+                            updateTimes(copy);
                             return;
                     }
                 };
