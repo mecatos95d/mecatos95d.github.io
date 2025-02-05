@@ -256,7 +256,7 @@
 
                 function onCopy() {
                     navigator.clipboard
-                        .writeText(b64)
+                        .writeText(b64())
                         .then(() => alert("Copied successfully!"))
                         .catch((e) => alert("Failed to copy..."));
                 }
