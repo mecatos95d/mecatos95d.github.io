@@ -188,6 +188,7 @@
             const MODAL_NEW = -1;
 
             const BUTTON_PRESET = [0, 32, 100, 300, 400, 500, 848, 1600, 2000];
+            const BUTTON_CALC = [38, 54, 800]; // 37.8 for 1h WZ Idle Dig
 
             const pad = (e) => e?.toString()?.padStart(2, "0") ?? "--";
             const pad2 = (e) => `${pad(e?.h)}:${pad(e?.m)}`;
@@ -411,23 +412,72 @@
                                         {format(obj.dest, 1)}
                                     </div>
                                 </label>
-                                Presets
-                                {BUTTON_PRESET.map((e) => {
-                                    const o = { h: (e / 100) | 0, m: e % 100 };
-                                    return (
-                                        <button
-                                            key={e}
-                                            className="preset"
-                                            children={pad2(o)}
-                                            onClick={() => updateObjKey(o)}
-                                        />
-                                    );
-                                })}
+                                <div>
+                                    Presets
+                                    {BUTTON_PRESET.map((e) => {
+                                        const o = {
+                                            h: (e / 100) | 0,
+                                            m: e % 100,
+                                        };
+                                        return (
+                                            <button
+                                                key={e}
+                                                className="preset"
+                                                children={pad2(o)}
+                                                onClick={() => updateObjKey(o)}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                                <div>
+                                    Calculator
+                                    {BUTTON_CALC.map((e) => {
+                                        const o = {
+                                            h: (e / 100) | 0,
+                                            m: e % 100,
+                                        };
+                                        const oM = {
+                                            h:
+                                                obj.h -
+                                                o.h +
+                                                Math.floor((obj.m - o.m) / 60),
+                                            m: (obj.m - o.m + 60) % 60,
+                                        };
+                                        const oP = {
+                                            h:
+                                                obj.h +
+                                                o.h +
+                                                Math.floor((obj.m + o.m) / 60),
+                                            m: (obj.m + o.m) % 60,
+                                        };
+                                        return (
+                                            <div className="h3">
+                                                {pad2(o)}
+                                                <button
+                                                    key={e}
+                                                    className="preset"
+                                                    children="-"
+                                                    onClick={() =>
+                                                        updateObjKey(oM)
+                                                    }
+                                                />
+                                                <button
+                                                    key={e}
+                                                    className="preset"
+                                                    children="+"
+                                                    onClick={() =>
+                                                        updateObjKey(oP)
+                                                    }
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                             <div className="modal-footer">
                                 <button
                                     onClick={() => onSubmit(obj)}
-                                    disabled={!updated}
+                                    disabled={!updated || obj.h < 0}
                                 >
                                     {idx === MODAL_NEW ? "Add" : "Update"} Time
                                 </button>
