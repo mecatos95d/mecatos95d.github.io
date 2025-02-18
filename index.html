@@ -412,6 +412,24 @@
                                         {format(obj.dest, 1)}
                                     </div>
                                 </label>
+                                <button
+                                    className="preset"
+                                    children="LOAD"
+                                    onClick={() => {
+                                        const d = Math.max(
+                                            0,
+                                            Math.ceil(
+                                                (new Date(obj.dest) -
+                                                    new Date()) /
+                                                    60000
+                                            )
+                                        );
+                                        updateObjKey({
+                                            h: (d / 60) | 0,
+                                            m: d % 60,
+                                        });
+                                    }}
+                                />
                                 <div>
                                     Presets
                                     {BUTTON_PRESET.map((e) => {
