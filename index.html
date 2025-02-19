@@ -60,6 +60,10 @@
                 }
             }
 
+            .m1 {
+                margin: 8px 0px;
+            }
+
             .time-item {
                 width: 100%;
             }
@@ -324,7 +328,7 @@
             function TimeItem({ time, itemFn }) {
                 return (
                     <div className="time-item">
-                        <h3>
+                        <h3 className="m1">
                             <span>{format(time?.dest, 1)}</span>
                             <span>{time?.game ?? ""}</span>
                             <span>{time?.memo ?? ""}</span>
