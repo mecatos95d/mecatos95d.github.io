@@ -207,7 +207,6 @@
             }
 
             function format(date, v = 0) {
-                console.log(date, v);
                 if (typeof date === "string") date = new Date(date);
                 let [day, hours, minutes] = ["Date", "Hours", "Minutes"].map(
                     (fn) => pad(date?.["get" + fn]?.())
@@ -604,41 +603,6 @@
                             return;
                     }
                 };
-
-                console.log(
-                    "DB",
-                    times,
-                    updated,
-                    typeof updated,
-                    times.reduce((a, t) => {
-                        console.log(
-                            "A",
-                            a,
-                            t.dest,
-                            new Date(t.dest),
-                            new Date(t.dest) > updated,
-                            Math.min(a, new Date(t.dest))
-                        );
-                        return new Date(t.dest) > updated
-                            ? Math.min(a, t.dest)
-                            : a;
-                    }, Number.MAX_SAFE_INTEGER)
-                );
-                console.log(
-                    "DB2",
-                    format(
-                        new Date(
-                            times.reduce(
-                                (a, t) =>
-                                    new Date(t.dest) > updated
-                                        ? Math.min(a, t.dest)
-                                        : a,
-                                Number.MAX_VALUE
-                            )
-                        ),
-                        1
-                    )
-                );
 
                 return (
                     <div>
