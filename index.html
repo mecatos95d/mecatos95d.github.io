@@ -185,7 +185,7 @@
     <body>
         <div id="root"></div>
         <script type="text/babel">
-            const { useState, useEffect } = React;
+            const { useEffect, useState, useRef } = React;
             const Modal = window.ReactModal;
 
             const MODAL_OFF = -2;
@@ -344,6 +344,7 @@
             }
 
             function TimeModal({ idx, init, onClose, onSubmit }) {
+                const ref = useRef({});
                 const [updated, setUpdated] = useState(false);
                 const [obj, setObj] = useState(
                     init ?? {
@@ -373,6 +374,14 @@
                     updateObjKey({ [k]: v });
                 };
 
+                function moveRef(e, key) {
+                    if (e.key === "Enter") {
+                        ref[key]?.focus();
+                    }
+                }
+
+                const TIL1 = ["game", "memo"];
+                const TIL2 = [[..."+h"], [...":m"]];
                 return (
                     <Modal
                         isOpen={idx > MODAL_OFF}
@@ -390,26 +399,34 @@
                             </div>
                             <div className="modal-body">
                                 <div className="text-input">
-                                    {["game", "memo"].map((e) => (
+                                    {TIL1.map((e, i) => (
                                         <label>
                                             {e}
                                             <input
+                                                ref={(el) => (ref[e] = el)}
                                                 value={obj[e]}
                                                 onChange={updateObj(e)}
+                                                onKeyDown={(e) =>
+                                                    moveRef(e, TIL1[1 - i])
+                                                }
                                             />
                                         </label>
                                     ))}
                                 </div>
                                 <label>
-                                    {[[..."+h"], [...":m"]].map(([a, b]) => (
+                                    {TIL2.map(([a, b], i) => (
                                         <>
                                             {a}
                                             <input
                                                 type="number"
                                                 min={0}
                                                 max={59}
+                                                ref={(el) => (ref[b] = el)}
                                                 value={obj[b]}
                                                 onChange={updateObj(b)}
+                                                onKeyDown={(e) =>
+                                                    moveRef(e, TIL2[1 - i][1])
+                                                }
                                             />
                                         </>
                                     ))}
