@@ -47,7 +47,7 @@
             }
 
             h3 {
-                line-height: 1;
+                line-height: 1.5rem;
                 font-size: 1rem;
                 display: flex;
                 align-items: center;
@@ -203,6 +203,7 @@
             }
 
             function format(date, v = 0) {
+                console.log(date, v);
                 if (typeof date === "string") date = new Date(date);
                 let [day, hours, minutes] = ["Date", "Hours", "Minutes"].map(
                     (fn) => pad(date?.["get" + fn]?.())
@@ -583,6 +584,41 @@
                     }
                 };
 
+                console.log(
+                    "DB",
+                    times,
+                    updated,
+                    typeof updated,
+                    times.reduce((a, t) => {
+                        console.log(
+                            "A",
+                            a,
+                            t.dest,
+                            new Date(t.dest),
+                            new Date(t.dest) > updated,
+                            Math.min(a, new Date(t.dest))
+                        );
+                        return new Date(t.dest) > updated
+                            ? Math.min(a, t.dest)
+                            : a;
+                    }, Number.MAX_SAFE_INTEGER)
+                );
+                console.log(
+                    "DB2",
+                    format(
+                        new Date(
+                            times.reduce(
+                                (a, t) =>
+                                    new Date(t.dest) > updated
+                                        ? Math.min(a, t.dest)
+                                        : a,
+                                Number.MAX_VALUE
+                            )
+                        ),
+                        1
+                    )
+                );
+
                 return (
                     <div>
                         <h1>Multiple Alarms</h1>
@@ -599,6 +635,19 @@
                                 //     {" ⇐ " + format(updatedPrev, 2)}
                                 // </>
                             }
+                            <br />
+                            {times.some((t) => new Date(t.dest) > updated) &&
+                                `NEXT | ${format(
+                                    new Date(
+                                        times.reduce((a, t) => {
+                                            const d = new Date(t.dest);
+                                            return d > updated
+                                                ? Math.min(a, d)
+                                                : a;
+                                        }, Number.MAX_VALUE)
+                                    ),
+                                    1
+                                )}`}
                             <button onClick={updateNow}>Update Now</button>
                         </h3>
                         {/* <h2>Saved Times</h2> */}
