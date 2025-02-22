@@ -194,8 +194,10 @@
             const BUTTON_PRESET = [0, 32, 100, 300, 400, 500, 848, 1600, 2000];
             const BUTTON_CALC = [38, 54, 800]; // 37.8 for 1h WZ Idle Dig
 
-            const pad = (e) => e?.toString()?.padStart(2, "0") ?? "--";
-            const pad2 = (e) => `${pad(e?.h)}:${pad(e?.m)}`;
+            const hm = (e, div = 60) => ({ h: (e / div) | 0, m: e % div });
+
+            const pad = e => e?.toString()?.padStart(2, "0") ?? "--";
+            const pad2 = e => `${pad(e?.h)}:${pad(e?.m)}`;
 
             function addTime(x) {
                 const now = new Date();
@@ -208,25 +210,21 @@
 
             function format(date, v = 0) {
                 if (typeof date === "string") date = new Date(date);
-                let [day, hours, minutes] = ["Date", "Hours", "Minutes"].map(
-                    (fn) => pad(date?.["get" + fn]?.())
+                let [day, hours, minutes] = ["Date", "Hours", "Minutes"].map(fn =>
+                    pad(date?.["get" + fn]?.())
                 );
-                let dayDiff = date?.getDate() - new Date().getDate();
+                let dayDf = date?.getDate() - new Date().getDate();
 
                 switch (v) {
                     case 0:
                         return `DAY ${day} | ${hours}:${minutes}`;
                     case 1:
-                        return `${
-                            dayDiff > 0 ? `+${dayDiff}d ` : ""
-                        }${hours}:${minutes}`;
+                        return `${dayDf > 0 ? `+${dayDf}d ` : ""}${hours}:${minutes}`;
                     case 2:
-                        return `${
-                            dayDiff < 0 ? `-${-dayDiff}d ` : ""
-                        }${hours}:${minutes}`;
-                    case 3:
+                        return `${dayDf < 0 ? `-${-dayDf}d ` : ""}${hours}:${minutes}`;
+                    case 3: // 1d = 86400000
                         return `${hours}:${minutes}${
-                            new Date() - date >= 86400000 ? " (OLD)" : "" // 1d = 86400000
+                            new Date() - date >= 86400000 ? " (OLD)" : ""
                         }`;
                 }
             }
@@ -235,20 +233,14 @@
                 const [modal, setMd] = useState(undefined);
                 const [field, setFd] = useState("");
 
-                const b64 = () =>
-                    btoa(
-                        unescape(
-                            encodeURIComponent(JSON.stringify(localStorage))
-                        )
-                    );
                 // Base64
+                const b64 = () =>
+                    btoa(unescape(encodeURIComponent(JSON.stringify(localStorage))));
                 function importD() {
                     try {
                         Object.entries(
                             JSON.parse(decodeURIComponent(escape(atob(field))))
-                        ).forEach(([key, value]) =>
-                            localStorage.setItem(key, value)
-                        );
+                        ).forEach(([key, value]) => localStorage.setItem(key, value));
                         load();
                         alert("Imported successfully!");
                         setMd(undefined);
@@ -259,12 +251,11 @@
 
                 useEffect(() => setFd(""), [modal]);
 
-                function onCopy() {
+                const onCopy = () =>
                     navigator.clipboard
                         .writeText(b64())
                         .then(() => alert("Copied successfully!"))
-                        .catch((e) => alert("Failed to copy..."));
-                }
+                        .catch(e => alert("Failed to copy..."));
 
                 return (
                     <div className="io modal-footer">
@@ -274,25 +265,18 @@
                             <Modal
                                 isOpen
                                 onRequestClose={() => setMd(undefined)}
-                                contentLabel="IO Modal"
                                 ariaHideApp={false} // a11y 오류 방지
-                            >
+                                contentLabel="IO Modal">
                                 <div className="modal-content">
                                     <div className="modal-header">
-                                        <h2>{`${modal}port`}</h2>
+                                        <h2>{modal}port</h2>
                                     </div>
                                     <div className="modal-body">
                                         <h3>
                                             <input
                                                 readonly={modal === "Ex"}
-                                                value={
-                                                    modal === "Ex"
-                                                        ? b64()
-                                                        : field
-                                                }
-                                                onChange={(e) =>
-                                                    setFd(e.target.value)
-                                                }
+                                                value={modal === "Ex" ? b64() : field}
+                                                onChange={e => setFd(e.target.value)}
                                             />
                                             {modal === "Ex" && (
                                                 <div className="io">
@@ -306,16 +290,13 @@
                                     </div>
                                     <div className="modal-footer">
                                         {modal === "Im" && (
-                                            <button
-                                                disabled={!field}
-                                                onClick={importD}
-                                                children="Import"
-                                            />
+                                            <button disabled={!field} onClick={importD}>
+                                                Import
+                                            </button>
                                         )}
-                                        <button
-                                            onClick={() => setMd(undefined)}
-                                            children="Cancel"
-                                        />
+                                        <button onClick={() => setMd(undefined)}>
+                                            Cancel
+                                        </button>
                                     </div>
                                 </div>
                             </Modal>
@@ -334,10 +315,37 @@
                             <span>{pad2(time)}</span>
                         </h3>
                         <div className="modal-footer">
-                            {["⇑", "⇓", "Edit", "Renew", "Delete"].map((e) => (
+                            {["⇑", "⇓", "Edit", "Renew", "Delete"].map(e => (
                                 <button onClick={() => itemFn(e)}>{e}</button>
                             ))}
                         </div>
+                    </div>
+                );
+            }
+
+            function TimeModalCalc({ obj, Btn }) {
+                const BP = [
+                    ["-", -1],
+                    ["+", 1],
+                ];
+                return (
+                    <div>
+                        Calculator
+                        {BUTTON_CALC.map(e => {
+                            const { h, m } = hm(e, 100);
+                            const oM = e => ({
+                                h: obj.h + e * h + Math.floor((obj.m + e * m) / 60),
+                                m: (obj.m + e * m + 60) % 60,
+                            });
+                            return (
+                                <div className="h3">
+                                    {pad2({ h, m })}
+                                    {BP.map(([a, b]) => (
+                                        <Btn key={e * b} children={a} newObj={oM(b)} />
+                                    ))}
+                                </div>
+                            );
+                        })}
                     </div>
                 );
             }
@@ -346,37 +354,44 @@
                 const ref = useRef({});
                 const [updated, setUpdated] = useState(false);
                 const [obj, setObj] = useState(
-                    init ?? {
-                        game: "",
-                        memo: "",
-                        h: 0,
-                        m: 0,
-                        dest: new Date(),
-                    }
+                    init ?? { game: "", memo: "", h: 0, m: 0, dest: new Date() }
                 );
 
-                function updateObjKey(e) {
-                    setObj((o) => {
-                        const r = {
-                            ...o,
-                            ...e,
-                        };
+                const updateObj = e =>
+                    setObj(o => {
+                        const r = { ...o, ...e };
                         setUpdated(addTime(r));
                         return r;
                     });
-                }
 
-                const updateObj = (k) => (e) => {
-                    let v = e.target.value;
-                    if ([..."hm"].includes(k))
-                        v = Math.max(0, Math.min(59, Number(v)));
-                    updateObjKey({ [k]: v });
-                };
+                const ModalButton = ({ children, newObj }) => (
+                    <button className="preset" onClick={() => updateObj(newObj)}>
+                        {children}
+                    </button>
+                );
 
-                function moveRef(e, key) {
-                    if (e.key === "Enter") {
-                        ref[key]?.focus();
-                    }
+                function TILInput({ e, target, number }) {
+                    const [a, b] = e;
+                    const onChange = e => {
+                        let v = e.target.value;
+                        if ([..."hm"].includes(b))
+                            v = Math.max(0, Math.min(59, Number(v)));
+                        updateObj({ [b]: v });
+                    };
+                    return (
+                        <>
+                            {a}
+                            <input
+                                type={number ? "number" : ""}
+                                min={0}
+                                max={59}
+                                ref={el => (ref[b] = el)}
+                                value={obj[b]}
+                                onChange={onChange}
+                                onKeyDown={e => e.key === "Enter" && ref[target]?.focus()}
+                            />
+                        </>
+                    );
                 }
 
                 const TIL1 = ["game", "memo"];
@@ -385,139 +400,53 @@
                     <Modal
                         isOpen={idx > MODAL_OFF}
                         onRequestClose={onClose}
-                        contentLabel="Add Time Modal"
                         ariaHideApp={false} // a11y 오류 방지
-                    >
+                        contentLabel="Add Time Modal">
                         <div className="modal-content">
                             <div className="modal-header">
-                                <h2>
-                                    {idx > MODAL_NEW
-                                        ? "Edit #" + idx
-                                        : "Add new"}
-                                </h2>
+                                <h2>{idx > MODAL_NEW ? "Edit #" + idx : "Add new"}</h2>
                             </div>
                             <div className="modal-body">
                                 <div className="text-input">
                                     {TIL1.map((e, i) => (
                                         <label>
-                                            {e}
-                                            <input
-                                                ref={(el) => (ref[e] = el)}
-                                                value={obj[e]}
-                                                onChange={updateObj(e)}
-                                                onKeyDown={(e) =>
-                                                    moveRef(e, TIL1[1 - i])
-                                                }
-                                            />
+                                            <TILInput e={[e, e]} target={TIL1[1 - i]} />
                                         </label>
                                     ))}
                                 </div>
                                 <label>
-                                    {TIL2.map(([a, b], i) => (
-                                        <>
-                                            {a}
-                                            <input
-                                                type="number"
-                                                min={0}
-                                                max={59}
-                                                ref={(el) => (ref[b] = el)}
-                                                value={obj[b]}
-                                                onChange={updateObj(b)}
-                                                onKeyDown={(e) =>
-                                                    moveRef(e, TIL2[1 - i][1])
-                                                }
-                                            />
-                                        </>
+                                    {TIL2.map((e, i) => (
+                                        <TILInput e={e} target={TIL2[1 - i][1]} number />
                                     ))}
-                                    <div className="dest">
-                                        {format(obj.dest, 1)}
-                                    </div>
+                                    <div className="dest">{format(obj.dest, 1)}</div>
                                 </label>
-                                <button
-                                    className="preset"
-                                    children="LOAD"
-                                    onClick={() => {
-                                        const d = Math.max(
+                                <ModalButton
+                                    newObj={hm(
+                                        Math.max(
                                             0,
                                             Math.ceil(
-                                                (new Date(obj.dest) -
-                                                    new Date()) /
-                                                    60000
+                                                (new Date(obj.dest) - new Date()) / 60000
                                             )
-                                        );
-                                        updateObjKey({
-                                            h: (d / 60) | 0,
-                                            m: d % 60,
-                                        });
-                                    }}
-                                />
+                                        )
+                                    )}>
+                                    LOAD
+                                </ModalButton>
                                 <div>
                                     Presets
-                                    {BUTTON_PRESET.map((e) => {
-                                        const o = {
-                                            h: (e / 100) | 0,
-                                            m: e % 100,
-                                        };
-                                        return (
-                                            <button
-                                                key={e}
-                                                className="preset"
-                                                children={pad2(o)}
-                                                onClick={() => updateObjKey(o)}
-                                            />
-                                        );
-                                    })}
+                                    {BUTTON_PRESET.map(e => (
+                                        <ModalButton
+                                            key={e}
+                                            newObj={hm(e, 100)}
+                                            children={pad2(hm(e, 100))}
+                                        />
+                                    ))}
                                 </div>
-                                <div>
-                                    Calculator
-                                    {BUTTON_CALC.map((e) => {
-                                        const o = {
-                                            h: (e / 100) | 0,
-                                            m: e % 100,
-                                        };
-                                        const oM = {
-                                            h:
-                                                obj.h -
-                                                o.h +
-                                                Math.floor((obj.m - o.m) / 60),
-                                            m: (obj.m - o.m + 60) % 60,
-                                        };
-                                        const oP = {
-                                            h:
-                                                obj.h +
-                                                o.h +
-                                                Math.floor((obj.m + o.m) / 60),
-                                            m: (obj.m + o.m) % 60,
-                                        };
-                                        return (
-                                            <div className="h3">
-                                                {pad2(o)}
-                                                <button
-                                                    key={e}
-                                                    className="preset"
-                                                    children="-"
-                                                    onClick={() =>
-                                                        updateObjKey(oM)
-                                                    }
-                                                />
-                                                <button
-                                                    key={e}
-                                                    className="preset"
-                                                    children="+"
-                                                    onClick={() =>
-                                                        updateObjKey(oP)
-                                                    }
-                                                />
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                <TimeModalCalc obj={obj} Btn={ModalButton} />
                             </div>
                             <div className="modal-footer">
                                 <button
                                     onClick={() => onSubmit(obj)}
-                                    disabled={!updated || obj.h < 0}
-                                >
+                                    disabled={!updated || obj.h < 0}>
                                     {idx === MODAL_NEW ? "Add" : "Update"} Time
                                 </button>
                                 <button onClick={onClose}>Cancel</button>
@@ -579,7 +508,7 @@
                     return undefined;
                 }
 
-                const manageTime = (idx) => (opt) => {
+                const manageTime = idx => opt => {
                     switch (opt) {
                         case "⇑":
                         case "⇓":
@@ -604,6 +533,8 @@
                     }
                 };
 
+                const cmp = (t, cmp = updated) => new Date(t.dest) > cmp;
+
                 return (
                     <div>
                         <h1>Multiple Alarms</h1>
@@ -621,15 +552,11 @@
                                 // </>
                             }
                             <br />
-                            {times.some((t) => new Date(t.dest) > updated) &&
+                            {times.some(cmp) &&
                                 `NEXT | ${format(
-                                    new Date(
-                                        times.reduce((a, t) => {
-                                            const d = new Date(t.dest);
-                                            return d > updated
-                                                ? Math.min(a, d)
-                                                : a;
-                                        }, Number.MAX_VALUE)
+                                    times.reduce(
+                                        (a, t) => (cmp(t) && !cmp(t, a) ? t.dest : a),
+                                        new Date("2999")
                                     ),
                                     1
                                 )}`}
@@ -639,17 +566,12 @@
                         <ul>
                             {times.map((t, index) => (
                                 <li key={index} state={getState(t)}>
-                                    <TimeItem
-                                        time={t}
-                                        itemFn={manageTime(index)}
-                                    />
+                                    <TimeItem time={t} itemFn={manageTime(index)} />
                                 </li>
                             ))}
                         </ul>
 
-                        <button onClick={() => setMdIdx(MODAL_NEW)}>
-                            Add Time
-                        </button>
+                        <button onClick={() => setMdIdx(MODAL_NEW)}>Add Time</button>
 
                         {mdIdx > MODAL_OFF && (
                             <TimeModal
