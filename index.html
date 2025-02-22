@@ -191,8 +191,8 @@
             const MODAL_OFF = -2;
             const MODAL_NEW = -1;
 
-            const BUTTON_PRESET = [0, 32, 100, 300, 400, 500, 848, 1600, 2000];
-            const BUTTON_CALC = [38, 54, 800]; // 37.8 for 1h WZ Idle Dig
+            const BTN_PRESET = [0, 32, 100, 300, 400, 500, 848, 1600, 2000];
+            const BTN_CALC = [38, 54, 800]; // 37.8 for 1h WZ Idle Dig
 
             const hm = (e, div = 60) => ({ h: (e / div) | 0, m: e % div });
 
@@ -323,32 +323,12 @@
                 );
             }
 
-            function TimeModalCalc({ obj, Btn }) {
-                const BP = [
-                    ["-", -1],
-                    ["+", 1],
-                ];
-                return (
-                    <div>
-                        Calculator
-                        {BUTTON_CALC.map(e => {
-                            const { h, m } = hm(e, 100);
-                            const oM = e => ({
-                                h: obj.h + e * h + Math.floor((obj.m + e * m) / 60),
-                                m: (obj.m + e * m + 60) % 60,
-                            });
-                            return (
-                                <div className="h3">
-                                    {pad2({ h, m })}
-                                    {BP.map(([a, b]) => (
-                                        <Btn key={e * b} children={a} newObj={oM(b)} />
-                                    ))}
-                                </div>
-                            );
-                        })}
-                    </div>
-                );
-            }
+            const TimeBtnDiv = ({ text, list, fn }) => (
+                <div>
+                    {text}
+                    {list.map(fn)}
+                </div>
+            );
 
             function TimeModal({ idx, init, onClose, onSubmit }) {
                 const ref = useRef({});
@@ -364,8 +344,8 @@
                         return r;
                     });
 
-                const ModalButton = ({ children, newObj }) => (
-                    <button className="preset" onClick={() => updateObj(newObj)}>
+                const ModalButton = ({ children, obj }) => (
+                    <button className="preset" onClick={() => updateObj(obj)}>
                         {children}
                     </button>
                 );
@@ -396,6 +376,31 @@
 
                 const TIL1 = ["game", "memo"];
                 const TIL2 = [[..."+h"], [...":m"]];
+                const BP = [
+                    ["-", -1],
+                    ["+", 1],
+                ];
+
+                const odp = Math.ceil((new Date(obj.dest) - new Date()) / 60000);
+                const preset = e => (
+                    <ModalButton key={e} obj={hm(e, 100)} children={pad2(hm(e, 100))} />
+                );
+                const calc = e => {
+                    const { h, m } = hm(e, 100);
+                    const oM = e => ({
+                        h: obj.h + e * h + Math.floor((obj.m + e * m) / 60),
+                        m: (obj.m + e * m + 60) % 60,
+                    });
+                    return (
+                        <div className="h3">
+                            {pad2({ h, m })}
+                            {BP.map(([a, b]) => (
+                                <ModalButton key={e * b} children={a} obj={oM(b)} />
+                            ))}
+                        </div>
+                    );
+                };
+
                 return (
                     <Modal
                         isOpen={idx > MODAL_OFF}
@@ -420,28 +425,9 @@
                                     ))}
                                     <div className="dest">{format(obj.dest, 1)}</div>
                                 </label>
-                                <ModalButton
-                                    newObj={hm(
-                                        Math.max(
-                                            0,
-                                            Math.ceil(
-                                                (new Date(obj.dest) - new Date()) / 60000
-                                            )
-                                        )
-                                    )}>
-                                    LOAD
-                                </ModalButton>
-                                <div>
-                                    Presets
-                                    {BUTTON_PRESET.map(e => (
-                                        <ModalButton
-                                            key={e}
-                                            newObj={hm(e, 100)}
-                                            children={pad2(hm(e, 100))}
-                                        />
-                                    ))}
-                                </div>
-                                <TimeModalCalc obj={obj} Btn={ModalButton} />
+                                <ModalButton children="LOAD" obj={hm(Math.max(0, odp))} />
+                                <TimeBtnDiv text="Preset" list={BTN_PRESET} fn={preset} />
+                                <TimeBtnDiv text="Calculator" list={BTN_CALC} fn={calc} />
                             </div>
                             <div className="modal-footer">
                                 <button
@@ -501,7 +487,6 @@
 
                 function getState(t) {
                     const dst = new Date(t.dest);
-
                     if (dst < updated)
                         // updatedPrev = undef then false
                         return dst > updatedPrev ? "pass" : "inactive";
@@ -542,15 +527,7 @@
                         {/* <h2>Last Updated</h2> */}
                         <h3>
                             {format(updated)}
-                            {
-                                updatedPrev && " ⇐ " + format(updatedPrev, 3)
-                                // <>
-                                //     {format(updatedPrev, 2).length > 5 && (
-                                //         <br />
-                                //     )}
-                                //     {" ⇐ " + format(updatedPrev, 2)}
-                                // </>
-                            }
+                            {updatedPrev && " ⇐ " + format(updatedPrev, 3)}
                             <br />
                             {times.some(cmp) &&
                                 `NEXT | ${format(
