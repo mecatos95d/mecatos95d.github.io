@@ -344,7 +344,7 @@
                         return r;
                     });
 
-                const ModalButton = ({ children, obj }) => (
+                const Btn = ({ children, obj }) => (
                     <button className="preset" onClick={() => updateObj(obj)}>
                         {children}
                     </button>
@@ -381,10 +381,8 @@
                     ["+", 1],
                 ];
 
-                const odp = Math.ceil((new Date(obj.dest) - new Date()) / 60000);
-                const preset = e => (
-                    <ModalButton key={e} obj={hm(e, 100)} children={pad2(hm(e, 100))} />
-                );
+                const objLeft = Math.ceil((new Date(obj.dest) - new Date()) / 60000);
+                const preset = e => <Btn obj={hm(e, 100)} children={pad2(hm(e, 100))} />;
                 const calc = e => {
                     const { h, m } = hm(e, 100);
                     const oM = e => ({
@@ -395,7 +393,7 @@
                         <div className="h3">
                             {pad2({ h, m })}
                             {BP.map(([a, b]) => (
-                                <ModalButton key={e * b} children={a} obj={oM(b)} />
+                                <Btn key={e * b} children={a} obj={oM(b)} />
                             ))}
                         </div>
                     );
@@ -425,7 +423,7 @@
                                     ))}
                                     <div className="dest">{format(obj.dest, 1)}</div>
                                 </label>
-                                <ModalButton children="LOAD" obj={hm(Math.max(0, odp))} />
+                                <Btn children="LOAD" obj={hm(Math.max(0, objLeft))} />
                                 <TimeBtnDiv text="Preset" list={BTN_PRESET} fn={preset} />
                                 <TimeBtnDiv text="Calculator" list={BTN_CALC} fn={calc} />
                             </div>
