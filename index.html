@@ -368,7 +368,7 @@
                                 ref={el => (ref[b] = el)}
                                 value={obj[b]}
                                 onChange={onChange}
-                                onKeyDown={e => {if (e.key === "Enter") ref[target]?.focus()}}
+                                onKeyDown={e => ref[e.key === "Enter" ? target : b]?.focus()}
                             />
                         </>
                     );
