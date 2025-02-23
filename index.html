@@ -306,6 +306,31 @@
                 );
             }
 
+            function TILInput({ obj, list, updateObj, num }) {
+                const ref = useRef({});
+                const onChange = k => e => {
+                    let v = e.target.value;
+                    if ([..."hm"].includes(k)) v = Math.max(0, Math.min(59, Number(v)));
+                    updateObj({ [k]: v });
+                };
+
+                const fd = ([a, b], i) => (
+                    <>
+                        {a}
+                        <input
+                            type={num ? "number" : ""}
+                            min={0}
+                            max={59}
+                            ref={el => el && (ref[i] = el)}
+                            value={obj[b]}
+                            onChange={onChange(b)}
+                            onKeyDown={e => e.key === "Enter" && ref[1 - i]?.focus()}
+                        />
+                    </>
+                );
+                return list.map((e, i) => (!num ? <label>{fd(e, i)}</label> : fd(e, i)));
+            }
+
             function TimeItem({ time, itemFn }) {
                 return (
                     <div className="time-item">
@@ -332,7 +357,6 @@
             );
 
             function TimeModal({ idx, init, onClose, onSubmit }) {
-                const ref = useRef({});
                 const [updated, setUpdated] = useState(false);
                 const [obj, setObj] = useState(
                     init ?? { game: "", memo: "", h: 0, m: 0, dest: new Date() }
@@ -351,39 +375,10 @@
                     </button>
                 );
 
-                const TIL1 = ["game", "memo"].map(e => Array(2).fill(e));
                 const BP = [
                     ["-", -1],
                     ["+", 1],
                 ];
-
-                function TILInput({ list, number }) {
-                    const ref = useRef({});
-                    const onChange = k => e => {
-                        let v = e.target.value;
-                        if ([..."hm"].includes(k))
-                            v = Math.max(0, Math.min(59, Number(v)));
-                        updateObj({ [k]: v });
-                    };
-
-                    const fd = ([a, b], i) => (
-                        <>
-                            {a}
-                            <input
-                                type={number ? "number" : ""}
-                                min={0}
-                                max={59}
-                                ref={el => el && (ref[i] = el)}
-                                value={obj[b]}
-                                onChange={onChange(b)}
-                                onKeyDown={e => e.key === "Enter" && ref[1 - i]?.focus()}
-                            />
-                        </>
-                    );
-                    return list.map((e, i) =>
-                        !number ? <label>{fd(e, i)}</label> : fd(e, i)
-                    );
-                }
 
                 const objLeft = Math.ceil((new Date(obj.dest) - new Date()) / 60000);
                 const preset = e => <Btn obj={hm(e, 100)}>{pad2(hm(e, 100))}</Btn>;
@@ -415,10 +410,19 @@
                             </div>
                             <div className="modal-body">
                                 <div className="text-input">
-                                    <TILInput list={TIL1} />
+                                    <TILInput
+                                        obj={obj}
+                                        list={["game", "memo"].map(e => Array(2).fill(e))}
+                                        updateObj={updateObj}
+                                    />
                                 </div>
                                 <label>
-                                    <TILInput list={[[..."+h"], [...":m"]]} number />
+                                    <TILInput
+                                        obj={obj}
+                                        list={[[..."+h"], [...":m"]]}
+                                        updateObj={updateObj}
+                                        num
+                                    />
                                     <div className="dest">{format(obj.dest, 1)}</div>
                                 </label>
                                 <Btn obj={hm(Math.max(0, objLeft))}>LOAD</Btn>
