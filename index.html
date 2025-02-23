@@ -306,31 +306,6 @@
                 );
             }
 
-            function TILInput({ obj, list, updateObj, num }) {
-                const ref = useRef({});
-                const onChange = k => e => {
-                    let v = e.target.value;
-                    if ([..."hm"].includes(k)) v = Math.max(0, Math.min(59, Number(v)));
-                    updateObj({ [k]: v });
-                };
-
-                const fd = ([a, b], i) => (
-                    <>
-                        {a}
-                        <input
-                            type={num ? "number" : ""}
-                            min={0}
-                            max={59}
-                            ref={el => el && (ref[i] = el)}
-                            value={obj[b]}
-                            onChange={onChange(b)}
-                            onKeyDown={e => e.key === "Enter" && ref[1 - i]?.focus()}
-                        />
-                    </>
-                );
-                return list.map((e, i) => (!num ? <label>{fd(e, i)}</label> : fd(e, i)));
-            }
-
             function TimeItem({ time, itemFn }) {
                 return (
                     <div className="time-item">
@@ -355,6 +330,31 @@
                     {list.map(fn)}
                 </div>
             );
+
+            function TILInput({ obj, list, updateObj, num }) {
+                const ref = useRef({});
+                const onChange = k => e => {
+                    let v = e.target.value;
+                    if ([..."hm"].includes(k)) v = Math.max(0, Math.min(59, Number(v)));
+                    updateObj({ [k]: v });
+                };
+
+                const fd = ([a, b], i) => (
+                    <>
+                        {a}
+                        <input
+                            type={num ? "number" : ""}
+                            min={0}
+                            max={59}
+                            ref={el => el && (ref[i] = el)}
+                            value={obj[b]}
+                            onChange={onChange(b)}
+                            onKeyDown={e => e.key === "Enter" && ref[1 - i]?.focus()}
+                        />
+                    </>
+                );
+                return list.map((e, i) => (!num ? <label>{fd(e, i)}</label> : fd(e, i)));
+            }
 
             function TimeModal({ idx, init, onClose, onSubmit }) {
                 const [updated, setUpdated] = useState(false);
