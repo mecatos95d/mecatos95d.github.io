@@ -176,6 +176,7 @@
 
             .modal-footer {
                 display: flex;
+                flex-wrap: wrap;
                 justify-content: flex-end;
                 margin-top: 10px;
                 gap: 10px;
@@ -315,7 +316,7 @@
                             <span>{pad2(time)}</span>
                         </h3>
                         <div className="modal-footer">
-                            {["⇑", "⇓", "Edit", "Renew", "Delete"].map(e => (
+                            {["⇑", "⇓", "Edit", "Renew", "Dismiss", "🗑️"].map(e => (
                                 <button onClick={() => itemFn(e)}>{e}</button>
                             ))}
                         </div>
@@ -447,10 +448,10 @@
             }
 
             function App() {
-                const [updatedPrev, setUpdatedPrev] = useState();
-                const [updated, setUpdated] = useState(
+                const [updatedPrev, setUpdatedPrev] = useState(
                     new Date(localStorage.getItem("updated"))
                 );
+                const [updated, setUpdated] = useState(new Date());
                 const [times, setTimes] = useState(loadTimes);
                 const [mdIdx, setMdIdx] = useState(MODAL_OFF);
 
@@ -460,40 +461,40 @@
                 }
 
                 function load() {
-                    setUpdatedPrev(undefined);
-                    setUpdated(new Date(localStorage.getItem("updated")));
+                    setUpdatedPrev(new Date(localStorage.getItem("updated")));
+                    setUpdated(new Date());
                     setTimes(loadTimes());
                 }
 
                 useEffect(() => {
-                    localStorage.setItem("updated", updated.toISOString());
-                }, [updated]);
+                    localStorage.setItem("updated", new Date());
+                    const interval = setInterval(() => setUpdated(new Date()), 30000);
+                    return () => clearInterval(interval);
+                }, []);
+
+                function save({ game, memo, h, m, dest }) {
+                    return { game, memo, h, m, dest };
+                }
 
                 function updateTimes(newTimes) {
                     setTimes(newTimes);
-                    localStorage.setItem("times", JSON.stringify(newTimes));
+                    localStorage.setItem("times", JSON.stringify(newTimes.map(save)));
                 }
 
-                function updateTime(time, idx = mdIdx) {
+                function updateTime(time, idx = mdIdx, dismiss = false) {
                     const newTimes = [...times];
-                    if (idx === MODAL_NEW) newTimes.push(time);
-                    else newTimes[idx] = time;
+                    dismiss ? (time.dismiss = true) : delete time.dismiss;
+                    idx === MODAL_NEW ? newTimes.push(time) : (newTimes[idx] = time);
                     updateTimes(newTimes);
                     setMdIdx(MODAL_OFF);
                 }
 
-                function updateNow() {
-                    const dt = new Date();
-                    if (dt - updated < 100000) return; // 100s
-                    setUpdatedPrev(updated);
-                    setUpdated(dt);
-                }
+                const cmp = (t, cmp = updated) => new Date(t.dest) > cmp;
 
                 function getState(t) {
-                    const dst = new Date(t.dest);
-                    if (dst < updated)
+                    if (!cmp(t))
                         // updatedPrev = undef then false
-                        return dst > updatedPrev ? "pass" : "inactive";
+                        return !t.dismiss && cmp(t, updatedPrev) ? "pass" : "inactive";
                     return undefined;
                 }
 
@@ -515,14 +516,24 @@
                             addTime(rt);
                             updateTime(rt, idx);
                             return;
-                        case "Delete":
+                        case "Dismiss":
+                            updateTime({ ...times[idx] }, idx, true);
+                            return;
+                        case "🗑️":
                             const ft = times.filter((_, i) => i !== idx);
                             updateTimes(ft);
                             return;
                     }
                 };
 
-                const cmp = (t, cmp = updated) => new Date(t.dest) > cmp;
+                function updateNow() {
+                    setUpdatedPrev(new Date());
+                    localStorage.setItem("updated", updatedPrev.toISOString());
+                }
+                const next = times.reduce(
+                    (a, t) => (cmp(t) && !cmp(t, a) ? new Date(t.dest) : a),
+                    new Date("2999")
+                );
 
                 return (
                     <div>
@@ -530,18 +541,10 @@
                         <IO load={load} />
                         {/* <h2>Last Updated</h2> */}
                         <h3>
-                            {format(updated)}
-                            {updatedPrev && " ⇐ " + format(updatedPrev, 3)}
-                            <br />
-                            {times.some(cmp) &&
-                                `NEXT | ${format(
-                                    times.reduce(
-                                        (a, t) =>
-                                            cmp(t) && !cmp(t, a) ? new Date(t.dest) : a,
-                                        new Date("2999")
-                                    ),
-                                    1
-                                )}`}
+                            {times.some(cmp) && `NEXT | ${format(next, 1)} ⇐ `}
+                            {format(updatedPrev)}
+                            {/* {updatedPrev && " ⇐ " + format(updatedPrev, 3)}
+                            <br /> */}
                             <button onClick={updateNow}>Update Now</button>
                         </h3>
                         {/* <h2>Saved Times</h2> */}
