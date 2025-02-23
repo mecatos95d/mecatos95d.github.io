@@ -330,6 +330,31 @@
                 </div>
             );
 
+            function TILInput({ obj, list, refData, updateObj, num }) {
+                const onChange = k => e => {
+                    let v = e.target.value;
+                    if ([..."hm"].includes(k)) v = Math.max(0, Math.min(59, Number(v)));
+                    updateObj({ [k]: v });
+                };
+                const onKeyDown = target => e => e.key === "Enter" && target?.focus();
+
+                const fd = ([a, b], i) => (
+                    <>
+                        {a}
+                        <input
+                            type={num ? "number" : ""}
+                            min={0}
+                            max={59}
+                            ref={el => el && (refData[b] = el)}
+                            value={obj[b]}
+                            onChange={onChange(b)}
+                            onKeyDown={onKeyDown(refData[list[1 - i][1]])}
+                        />
+                    </>
+                );
+                return list.map((e, i) => (!num ? <label>{fd(e, i)}</label> : fd(e, i)));
+            }
+
             function TimeModal({ idx, init, onClose, onSubmit }) {
                 const ref = useRef({});
                 const [updated, setUpdated] = useState(false);
@@ -350,31 +375,7 @@
                     </button>
                 );
 
-                function TILInput({ e, target, number }) {
-                    const [a, b] = e;
-                    const onChange = e => {
-                        let v = e.target.value;
-                        if ([..."hm"].includes(b))
-                            v = Math.max(0, Math.min(59, Number(v)));
-                        updateObj({ [b]: v });
-                    };
-                    return (
-                        <>
-                            {a}
-                            <input
-                                type={number ? "number" : ""}
-                                min={0}
-                                max={59}
-                                ref={el => (ref[b] = el)}
-                                value={obj[b]}
-                                onChange={onChange}
-                                onKeyDown={e => ref[e.key === "Enter" ? target : b]?.focus()}
-                            />
-                        </>
-                    );
-                }
-
-                const TIL1 = ["game", "memo"];
+                const TIL1 = ["game", "memo"].map(e => Array(2).fill(e));
                 const TIL2 = [[..."+h"], [...":m"]];
                 const BP = [
                     ["-", -1],
@@ -393,7 +394,7 @@
                         <div className="h3">
                             {pad2({ h, m })}
                             {BP.map(([a, b]) => (
-                                <Btn key={e * b} obj={oM(b)}>{a}</Btn>
+                                <Btn key={e * b} obj={oM(b)} children={a} />
                             ))}
                         </div>
                     );
@@ -411,16 +412,21 @@
                             </div>
                             <div className="modal-body">
                                 <div className="text-input">
-                                    {TIL1.map((e, i) => (
-                                        <label>
-                                            <TILInput e={[e, e]} target={TIL1[1 - i]} />
-                                        </label>
-                                    ))}
+                                    <TILInput
+                                        obj={obj}
+                                        list={TIL1}
+                                        refData={ref}
+                                        updateObj={updateObj}
+                                    />
                                 </div>
                                 <label>
-                                    {TIL2.map((e, i) => (
-                                        <TILInput e={e} target={TIL2[1 - i][1]} number />
-                                    ))}
+                                    <TILInput
+                                        obj={obj}
+                                        list={TIL2}
+                                        refData={ref}
+                                        updateObj={updateObj}
+                                        num
+                                    />
                                     <div className="dest">{format(obj.dest, 1)}</div>
                                 </label>
                                 <Btn obj={hm(Math.max(0, objLeft))}>LOAD</Btn>
@@ -530,7 +536,8 @@
                             {times.some(cmp) &&
                                 `NEXT | ${format(
                                     times.reduce(
-                                        (a, t) => (cmp(t) && !cmp(t, a) ? t.dest : a),
+                                        (a, t) =>
+                                            cmp(t) && !cmp(t, a) ? new Date(t.dest) : a,
                                         new Date("2999")
                                     ),
                                     1
