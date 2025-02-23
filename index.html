@@ -461,9 +461,14 @@
                     setTimes(loadTimes());
                 }
 
+                function refresh() {
+                    localStorage.setItem("updated", new Date());
+                    setUpdated(new Date());
+                }
+
                 useEffect(() => {
                     localStorage.setItem("updated", new Date());
-                    const interval = setInterval(() => setUpdated(new Date()), 30000);
+                    const interval = setInterval(() => refresh(), 30000);
                     return () => clearInterval(interval);
                 }, []);
 
@@ -523,7 +528,7 @@
 
                 function updateNow() {
                     setUpdatedPrev(new Date());
-                    localStorage.setItem("updated", updatedPrev.toISOString());
+                    refresh();
                 }
                 const next = times.reduce(
                     (a, t) => (cmp(t) && !cmp(t, a) ? new Date(t.dest) : a),
