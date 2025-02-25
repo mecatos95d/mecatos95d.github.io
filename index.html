@@ -17,175 +17,12 @@
         ></script>
         <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/react-modal@3.14.3/dist/react-modal.min.js"></script>
-
-        <style>
-            #root {
-                width: 100vw;
-                max-width: 500px;
-            }
-
-            body {
-                font-family: Arial, sans-serif;
-                background-color: #f4f7fc;
-                margin: 0;
-                padding: 10px;
-                display: flex;
-                justify-content: center;
-                align-items: start;
-                height: 100vh;
-            }
-
-            h1 {
-                text-align: center;
-                font-size: 1.8rem;
-                color: #333;
-            }
-
-            h2 {
-                font-size: 1.2rem;
-                color: #333;
-            }
-
-            h3 {
-                line-height: 1.5rem;
-                font-size: 1rem;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                width: 100%;
-                gap: 3px;
-
-                span {
-                    width: 25%;
-                }
-            }
-
-            .m1 {
-                margin: 8px 0px;
-            }
-
-            .time-item {
-                width: 100%;
-            }
-
-            p {
-                color: #666;
-            }
-
-            button {
-                background-color: #59f;
-                color: white;
-                padding: 5px 10px;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                transition: background-color 0.3s ease;
-                font-size: 1rem;
-            }
-
-            button.preset {
-                font-size: 0.9rem;
-                background-color: lightblue;
-                padding: 5px;
-                border-radius: 3px;
-                margin: 3px;
-            }
-
-            button:hover {
-                background-color: #48f;
-            }
-
-            button:disabled {
-                background-color: #ccc;
-                cursor: not-allowed;
-            }
-
-            ul {
-                list-style-type: none;
-                padding: 0;
-            }
-
-            li {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 0px 10px 5px;
-                background-color: #fff;
-                border: 1px solid #ddd;
-                border-radius: 5px;
-
-                &[state="pass"] {
-                    background-color: #afa;
-                }
-
-                &[state="inactive"] {
-                    background-color: #bbb;
-                }
-            }
-
-            li button,
-            .io button {
-                padding: 5px 10px;
-                font-size: 0.8rem;
-            }
-
-            .ReactModal__Content {
-                max-width: 300px;
-            }
-
-            .modal-content {
-                padding: 20px;
-                background-color: #fff;
-                border-radius: 5px;
-            }
-
-            .modal-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .modal-body {
-                label {
-                    font-size: 1rem;
-                    margin-bottom: 10px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    width: 100%;
-                }
-
-                .text-input {
-                    display: flex;
-                    flex-direction: column;
-                }
-
-                .dest {
-                    text-align: end;
-                    width: 4.5rem;
-                }
-
-                input {
-                    width: 70%;
-                }
-
-                input[type="number"] {
-                    width: 20%;
-                }
-            }
-
-            .modal-footer {
-                display: flex;
-                flex-wrap: wrap;
-                justify-content: flex-end;
-                margin-top: 10px;
-                gap: 10px;
-            }
-        </style>
+        <link rel="stylesheet" href="style.css" />
     </head>
     <body>
         <div id="root"></div>
         <script type="text/babel">
+            const { createRoot } = ReactDOM;
             const { useEffect, useState, useRef } = React;
             const Modal = window.ReactModal;
 
@@ -569,7 +406,7 @@
                     </div>
                 );
             }
-            ReactDOM.render(<App />, document.getElementById("root"));
+            createRoot(document.getElementById("root")).render(<App />);
         </script>
     </body>
 </html>
