@@ -428,7 +428,7 @@
                     refresh();
                 }
                 const next = times.reduce(
-                    (a, t) => (cmp(t) && !cmp(t, a) ? new Date(t.dest) : a),
+                    (a, t) => (!t.fixed && cmp(t) && !cmp(t, a) ? new Date(t.dest) : a),
                     new Date("2999")
                 );
 
@@ -438,7 +438,7 @@
                         <IO load={load} />
                         {/* <h2>Last Updated</h2> */}
                         <h3>
-                            {times.some(t => cmp(t)) && `${format(next, 1)} ⇐ `}
+                            {times.some(t => !t.fixed && cmp(t)) && `${format(next, 1)} ⇐ `}
                             {format(updatedPrev)}
                             {/* {updatedPrev && " ⇐ " + format(updatedPrev, 3)}
                             <br /> */}
