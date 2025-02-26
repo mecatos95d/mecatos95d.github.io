@@ -378,20 +378,20 @@
                     localStorage.setItem("times", JSON.stringify(newTimes.map(save)));
                 }
 
+                const cmp = (t, _, cmp = updated) => new Date(t.dest) > cmp;
+
                 function updateTime(time, idx = mdIdx, dismiss = false) {
                     const newTimes = [...times];
-                    dismiss ? (time.dismiss = true) : delete time.dismiss;
+                    dismiss && !cmp(time) ? (time.dismiss = true) : delete time.dismiss;
                     idx === MODAL_NEW ? newTimes.push(time) : (newTimes[idx] = time);
                     updateTimes(newTimes);
                     setMdIdx(MODAL_OFF);
                 }
 
-                const cmp = (t, cmp = updated) => new Date(t.dest) > cmp;
-
                 function getState(t) {
                     if (!cmp(t))
                         // updatedPrev = undef then false
-                        return !t.dismiss && cmp(t, updatedPrev) ? "pass" : "inactive";
+                        return !t.dismiss && cmp(t, 0, updatedPrev) ? "pass" : "inactive";
                     return undefined;
                 }
 
@@ -427,7 +427,7 @@
                     refresh();
                 }
                 const next = times.reduce(
-                    (a, t) => (cmp(t) && !cmp(t, a) ? new Date(t.dest) : a),
+                    (a, t) => (cmp(t) && !cmp(t, 0, a) ? new Date(t.dest) : a),
                     new Date("2999")
                 );
 
