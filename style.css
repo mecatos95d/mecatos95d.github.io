@@ -41,6 +41,10 @@ h3 {
 
 .m1 {
     margin: 8px 0px;
+
+    .daily {
+        font-size: 0.7rem;
+    }
 }
 
 .time-item {
@@ -132,6 +136,11 @@ li button,
         align-items: center;
         justify-content: space-between;
         width: 100%;
+
+        .fd-txt {
+            width: 8%;
+            text-align: center;
+        }
     }
 
     .text-input {
@@ -149,7 +158,11 @@ li button,
     }
 
     input[type="number"] {
-        width: 20%;
+        width: 15%;
+    }
+
+    input[type="checkbox"] {
+        width: unset;
     }
 }
 

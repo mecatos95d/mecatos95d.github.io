@@ -29,7 +29,7 @@
             const MODAL_OFF = -2;
             const MODAL_NEW = -1;
 
-            const BTN_PRESET = [0, 32, 100, 300, 400, 500, 848, 1600, 2000];
+            const BTN_PRESET = [0, 32, 100, 300, 400, 500, 600, 848, 900, 1600, 2000];
             const BTN_CALC = [38, 54, 800]; // 37.8 for 1h WZ Idle Dig
 
             const hm = (e, div = 60) => ({ h: (e / div) | 0, m: e % div });
@@ -39,11 +39,23 @@
 
             function addTime(x) {
                 const now = new Date();
-                now.setHours(now.getHours() + x.h);
-                now.setMinutes(now.getMinutes() + x.m);
+                // H, M Limitation
+                x.h = Math.max(0, Math.min(x.fixed ? 23 : 59, x.h));
+                x.m = Math.max(0, Math.min(59, x.m));
+
                 now.setSeconds(0);
-                x.dest = now;
-                return x.h || x.m;
+                if (x.fixed) {
+                    now.setHours(x.h);
+                    now.setMinutes(x.m);
+                    if (now < new Date()) now.setDate(now.getDate() + 1);
+                    x.dest = now;
+                    return true;
+                } else {
+                    now.setHours(now.getHours() + x.h);
+                    now.setMinutes(now.getMinutes() + x.m);
+                    x.dest = now;
+                    return x.h || x.m;
+                }
             }
 
             function format(date, v = 0) {
@@ -150,11 +162,18 @@
                             <span>{format(time?.dest, 1)}</span>
                             <span>{time?.game ?? ""}</span>
                             <span>{time?.memo ?? ""}</span>
-                            <span>{pad2(time)}</span>
+                            <span>
+                                {time.fixed && <span class="daily">Daily </span>}
+                                {pad2(time)}
+                            </span>
                         </h3>
                         <div className="modal-footer">
                             {["⇑", "⇓", "Edit", "Renew", "Dismiss", "🗑️"].map(e => (
-                                <button onClick={() => itemFn(e)}>{e}</button>
+                                <button
+                                    disabled={time.fixed && e === "Dismiss"}
+                                    onClick={() => itemFn(e)}>
+                                    {e}
+                                </button>
                             ))}
                         </div>
                     </div>
@@ -170,23 +189,27 @@
 
             function TILInput({ obj, list, updateObj, num }) {
                 const ref = useRef({});
+                const max = k => (obj.fixed && k == "h" ? 23 : 59);
                 const onChange = k => e => {
                     let v = e.target.value;
-                    if ([..."hm"].includes(k)) v = Math.max(0, Math.min(59, Number(v)));
+                    if ([..."hm"].includes(k))
+                        v = Math.max(0, Math.min(max(k), Number(v)));
                     updateObj({ [k]: v });
                 };
 
                 const fd = ([a, b], i) => (
                     <>
-                        {a}
+                        <span class="fd-txt">{a}</span>
                         <input
                             type={num ? "number" : ""}
                             min={0}
-                            max={59}
+                            max={max(b)}
                             ref={el => el && (ref[i] = el)}
                             value={obj[b]}
                             onChange={onChange(b)}
-                            onKeyDown={e => e.key === "Enter" && ref[1 - i]?.focus()}
+                            onKeyDown={e =>
+                                ["Enter", "Tab"].includes(e.key) && ref[1 - i]?.focus()
+                            }
                         />
                     </>
                 );
@@ -196,7 +219,14 @@
             function TimeModal({ idx, init, onClose, onSubmit }) {
                 const [updated, setUpdated] = useState(false);
                 const [obj, setObj] = useState(
-                    init ?? { game: "", memo: "", h: 0, m: 0, dest: new Date() }
+                    init ?? {
+                        game: "",
+                        memo: "",
+                        h: 0,
+                        m: 0,
+                        dest: new Date(),
+                        fixed: false,
+                    }
                 );
 
                 const updateObj = e =>
@@ -206,8 +236,11 @@
                         return r;
                     });
 
-                const Btn = ({ children, obj }) => (
-                    <button className="preset" onClick={() => updateObj(obj)}>
+                const Btn = ({ children, disabled, obj }) => (
+                    <button
+                        className="preset"
+                        disabled={disabled}
+                        onClick={() => updateObj(obj)}>
                         {children}
                     </button>
                 );
@@ -256,13 +289,25 @@
                                 <label>
                                     <TILInput
                                         obj={obj}
-                                        list={[[..."+h"], [...":m"]]}
+                                        list={[[obj.fixed ? "@" : "+", "h"], [...":m"]]}
                                         updateObj={updateObj}
                                         num
                                     />
                                     <div className="dest">{format(obj.dest, 1)}</div>
                                 </label>
-                                <Btn obj={hm(Math.max(0, objLeft))}>LOAD</Btn>
+                                <div>
+                                    <input
+                                        type="checkbox"
+                                        checked={obj.fixed}
+                                        onChange={e =>
+                                            updateObj({ fixed: e.target.checked })
+                                        }
+                                    />
+                                    <span>Daily Task / Fixed Time</span>
+                                </div>
+                                <Btn disabled={obj.fixed} obj={hm(Math.max(0, objLeft))}>
+                                    LOAD
+                                </Btn>
                                 <TimeBtnDiv text="Preset" list={BTN_PRESET} fn={preset} />
                                 <TimeBtnDiv text="Calculator" list={BTN_CALC} fn={calc} />
                             </div>
@@ -309,8 +354,8 @@
                     return () => clearInterval(interval);
                 }, []);
 
-                function save({ game, memo, h, m, dest }) {
-                    return { game, memo, h, m, dest };
+                function save({ game, memo, h, m, dest, fixed }) {
+                    return { game, memo, h, m, dest, fixed };
                 }
 
                 function updateTimes(newTimes) {
@@ -336,6 +381,7 @@
                 }
 
                 const manageTime = idx => opt => {
+                    const rt = { ...times[idx] };
                     switch (opt) {
                         case "⇑":
                         case "⇓":
@@ -349,16 +395,14 @@
                             setMdIdx(idx);
                             return;
                         case "Renew":
-                            const rt = { ...times[idx] };
                             addTime(rt);
                             updateTime(rt, idx);
                             return;
                         case "Dismiss":
-                            updateTime({ ...times[idx] }, idx, true);
+                            updateTime(rt, idx, true);
                             return;
                         case "🗑️":
-                            const ft = times.filter((_, i) => i !== idx);
-                            updateTimes(ft);
+                            updateTimes(times.filter((_, i) => i !== idx));
                             return;
                     }
                 };
