@@ -379,7 +379,7 @@
                     localStorage.setItem("times", JSON.stringify(newTimes.map(save)));
                 }
 
-                const cmp = (t, _, cmp = updated) => new Date(t.dest) > cmp;
+                const cmp = (t, cmp = updated) => new Date(t.dest) > cmp;
 
                 function updateTime(time, idx = mdIdx, dismiss = false) {
                     const newTimes = [...times];
@@ -392,7 +392,7 @@
                 function getState(t) {
                     if (!cmp(t))
                         // updatedPrev = undef then false
-                        return !t.dismiss && cmp(t, 0, updatedPrev) ? "pass" : "inactive";
+                        return !t.dismiss && cmp(t, updatedPrev) ? "pass" : "inactive";
                     return undefined;
                 }
 
@@ -428,7 +428,7 @@
                     refresh();
                 }
                 const next = times.reduce(
-                    (a, t) => (cmp(t) && !cmp(t, 0, a) ? new Date(t.dest) : a),
+                    (a, t) => (cmp(t) && !cmp(t, a) ? new Date(t.dest) : a),
                     new Date("2999")
                 );
 
@@ -438,7 +438,7 @@
                         <IO load={load} />
                         {/* <h2>Last Updated</h2> */}
                         <h3>
-                            {times.some(cmp) && `${format(next, 1)} ⇐ `}
+                            {times.some(t => cmp(t)) && `${format(next, 1)} ⇐ `}
                             {format(updatedPrev)}
                             {/* {updatedPrev && " ⇐ " + format(updatedPrev, 3)}
                             <br /> */}
