@@ -29,8 +29,9 @@
             const MODAL_OFF = -2;
             const MODAL_NEW = -1;
 
-            const BTN_PRESET = [0, 32, 100, 300, 400, 500, 600, 848, 900, 1600, 2000];
-            const BTN_CALC = [38, 54, 800]; // 37.8 for 1h WZ Idle Dig
+            const BTN_PRESET = [0, 16, 32, 100, 300, 400, 500, 600, 848, 900, 1600, 2000];
+            // const BTN_CALC = [38, 54, 800]; // 37.8 for 1h WZ Idle Dig
+            const BTN_CALC = [800]; // 37.8 for 1h WZ Idle Dig
 
             const ONE_MIN_MS = 6e4;
             const ONE_DAY_MS = 864e5;
@@ -175,7 +176,7 @@
                             </span>
                         </h3>
                         <div className="modal-footer">
-                            {["⇑", "⇓", "Edit", "Renew", "🗑️"].map(e => (
+                            {["⇓", "⇑", "Edit", "Renew", "🗑️"].map(e => (
                                 <button
                                     onClick={ev => {
                                         ev.stopPropagation();
