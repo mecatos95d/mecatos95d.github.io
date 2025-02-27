@@ -166,7 +166,6 @@
             }
 
             function TimeItem({ time, state, timeText, itemFn }) {
-                const [open, setOpen] = useState(false);
                 const itemFnWrap = e => ev => {
                     ev.stopPropagation();
                     itemFn(e);
@@ -193,18 +192,20 @@
                     <div
                         className="time-item"
                         state={state}
-                        onClick={() => setOpen(!open)}>
+                        onClick={() => itemFn("Open")}>
                         <h3 className="m1">
                             <span>{timeText}</span>
                             <span>{time?.game ?? ""}</span>
                             <span>{time?.memo ?? ""}</span>
                             <span>
-                                {time.fixed && <span class="m1-small">Daily </span>}
-                                {(time.fixed ? pad2 : pad2hm)(time)}
+                                {time?.fixed && <span class="m1-small">Daily </span>}
+                                {(time?.fixed ? pad2 : pad2hm)(time)}
                             </span>
-                            <span style={{ width: "20px" }}>{"▲▼"[Number(open)]}</span>
+                            <span style={{ width: "20px" }}>
+                                {"▼▲"[Number(time?.open ?? 0)]}
+                            </span>
                         </h3>
-                        {open && (
+                        {time?.open && (
                             <div className="modal-footer">
                                 {opt(state)}
                                 {["⇓", "⇑", "Edit", "Renew", "🗑️"].map(e => (
@@ -439,6 +440,12 @@
                             [ct[idx], ct[idxN]] = [ct[idxN], ct[idx]];
                             updateTimes(ct);
                             return;
+                        case "Exclude":
+                        case "Open":
+                            const key = opt.toLowerCase();
+                            rt[key] = !rt[key];
+                            updateTime(rt, idx);
+                            return;
                         case "Edit":
                             setMdIdx(idx);
                             return;
@@ -448,10 +455,6 @@
                             return;
                         case "Dismiss":
                             updateTime(rt, idx, true);
-                            return;
-                        case "Exclude":
-                            rt.exclude = !rt.exclude;
-                            updateTime(rt, idx);
                             return;
                         case "🗑️":
                             updateTimes(times.filter((_, i) => i !== idx));
