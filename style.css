@@ -1,11 +1,15 @@
 #root {
     width: 100vw;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     max-width: 500px;
 }
 
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f7fc;
+    box-sizing: border-box;
+    background-color: #eee;
     margin: 0;
     padding: 10px;
     display: flex;
@@ -15,6 +19,7 @@ body {
 }
 
 h1 {
+    flex: 0 1;
     text-align: center;
     font-size: 1.8rem;
     color: #333;
@@ -26,6 +31,7 @@ h2 {
 }
 
 h3 {
+    flex: 0 1;
     line-height: 1.5rem;
     font-size: 1rem;
     display: flex;
@@ -40,15 +46,11 @@ h3 {
 }
 
 .m1 {
-    margin: 8px 0px;
+    margin: 8px 0;
 
     .m1-small {
         font-size: 0.7rem;
     }
-}
-
-.time-item {
-    width: 100%;
 }
 
 p {
@@ -83,19 +85,17 @@ button:disabled {
     cursor: not-allowed;
 }
 
-ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-li {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0px 10px;
+.time-item {
+    width: 100%;
+    padding: 0 10px;
+    box-sizing: border-box;
     background-color: #fff;
     border: 1px solid #ddd;
-    border-radius: 5px;
+    border-radius: 8px;
+
+    .modal-footer {
+        margin-top: 0;
+    }
 
     &[state="pass"] {
         background-color: #afa;
@@ -106,18 +106,44 @@ li {
     }
 }
 
-.io {
+.ul-header {
+    position: sticky;
+    top: 0;
+    background-color: lightblue;
+    z-index: 1;
+    box-shadow: 0px -8px #eee;
+}
+
+.ul {
+    flex: 1;
     display: flex;
+    height: 100%;
+    width: 100%;
+    overflow-y: scroll;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    flex-direction: column;
     align-items: center;
     justify-content: space-between;
 }
 
-li button,
-.io button {
-    margin-left: 10px;
+.io {
+    flex: 0 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    button {
+        margin-left: 10px;
+    }
+}
+
+.io button,
+.time-item button {
     padding: 5px 10px;
     font-size: 0.8rem;
 }
+
 
 .ReactModal__Content {
     max-width: 300px;
@@ -180,8 +206,8 @@ li button,
 .modal-footer {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
-    margin-top: 10px;
-    margin-bottom: 5px;
+    margin: 8px 0;
     gap: 10px;
 }

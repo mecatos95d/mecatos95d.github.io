@@ -36,6 +36,8 @@
             const ONE_MIN_MS = 6e4;
             const ONE_DAY_MS = 864e5;
 
+            const LARGE_DATE = new Date("2999");
+
             const hm = (e, div = 60) => ({ h: (e / div) | 0, m: e % div });
 
             const pad = e => e?.toString()?.padStart(2, "0") ?? "--";
@@ -163,9 +165,35 @@
                 );
             }
 
-            function TimeItem({ time, timeText, itemFn }) {
+            function TimeItem({ time, state, timeText, itemFn }) {
+                const [open, setOpen] = useState(false);
+                const itemFnWrap = e => ev => {
+                    ev.stopPropagation();
+                    itemFn(e);
+                };
+
+                const opt = state => {
+                    switch (state) {
+                        case "pass":
+                            return (
+                                <button onClick={itemFnWrap("Dismiss")}>Dismiss</button>
+                            );
+                        case "inactive":
+                        case undefined:
+                            return (
+                                <span onClick={itemFnWrap("Exclude")}>
+                                    <input type="checkbox" checked={time.exclude} />
+                                    Exclude
+                                </span>
+                            );
+                    }
+                };
+
                 return (
-                    <div className="time-item">
+                    <div
+                        className="time-item"
+                        state={state}
+                        onClick={() => setOpen(!open)}>
                         <h3 className="m1">
                             <span>{timeText}</span>
                             <span>{time?.game ?? ""}</span>
@@ -174,18 +202,16 @@
                                 {time.fixed && <span class="m1-small">Daily </span>}
                                 {(time.fixed ? pad2 : pad2hm)(time)}
                             </span>
+                            <span style={{ width: "20px" }}>{"▲▼"[Number(open)]}</span>
                         </h3>
-                        <div className="modal-footer">
-                            {["⇓", "⇑", "Edit", "Renew", "🗑️"].map(e => (
-                                <button
-                                    onClick={ev => {
-                                        ev.stopPropagation();
-                                        itemFn(e);
-                                    }}>
-                                    {e}
-                                </button>
-                            ))}
-                        </div>
+                        {open && (
+                            <div className="modal-footer">
+                                {opt(state)}
+                                {["⇓", "⇑", "Edit", "Renew", "🗑️"].map(e => (
+                                    <button onClick={itemFnWrap(e)}>{e}</button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 );
             }
@@ -236,6 +262,7 @@
                         m: 0,
                         dest: new Date(),
                         fixed: false,
+                        exclude: false,
                     }
                 );
 
@@ -311,7 +338,13 @@
                                     Next Alarm at:
                                     <div className="dest">{format(obj.dest, 1)}</div>
                                 </label>
-                                <div onClick={() => updateObj({ fixed: !obj.fixed })}>
+                                <div
+                                    onClick={() =>
+                                        updateObj({
+                                            fixed: !obj.fixed,
+                                            exclude: !obj.fixed,
+                                        })
+                                    }>
                                     <input type="checkbox" checked={obj.fixed} />
                                     <span>Daily Task / Fixed Time</span>
                                 </div>
@@ -367,8 +400,8 @@
                     return () => clearInterval(interval);
                 }, []);
 
-                function save({ game, memo, h, m, dest, fixed }) {
-                    return { game, memo, h, m, dest, fixed };
+                function save({ game, memo, h, m, dest, fixed, exclude }) {
+                    return { game, memo, h, m, dest, fixed, exclude };
                 }
 
                 function updateTimes(newTimes) {
@@ -414,6 +447,10 @@
                         case "Dismiss":
                             updateTime(rt, idx, true);
                             return;
+                        case "Exclude":
+                            rt.exclude = !rt.exclude;
+                            updateTime(rt, idx);
+                            return;
                         case "🗑️":
                             updateTimes(times.filter((_, i) => i !== idx));
                             return;
@@ -425,19 +462,19 @@
                     refresh();
                 }
                 const next = times.reduce(
-                    (a, t) => (!t.fixed && cmp(t) && !cmp(t, a) ? new Date(t.dest) : a),
-                    new Date("2999")
+                    (a, t) => (!t.exclude && cmp(t) && !cmp(t, a) ? new Date(t.dest) : a),
+                    LARGE_DATE
                 );
 
                 const timeText = time =>
                     hideDaily && time?.fixed
                         ? cmp(time)
-                            ? "Ready"
-                            : "Done"
+                            ? "Done"
+                            : "Ready"
                         : format(time?.dest, 1);
 
                 return (
-                    <div>
+                    <>
                         <h1>Multiple Alarms</h1>
                         <span className="io">
                             <span
@@ -453,41 +490,40 @@
                         </span>
                         {/* <h2>Last Updated</h2> */}
                         <h3>
-                            {times.some(t => !t.fixed && cmp(t)) &&
-                                `${format(next, 1)} ⇐ `}
+                            {next !== LARGE_DATE && `${format(next, 1)} ⇐ `}
                             {format(updatedPrev)}
                             {/* {updatedPrev && " ⇐ " + format(updatedPrev, 3)}
                             <br /> */}
                             <button onClick={updateNow}>Update Now</button>
                         </h3>
                         {/* <h2>Saved Times</h2> */}
-                        <ul>
+                        <div className="ul">
                             {/* HEADER AREA */}
-                            <li>
-                                <div className="time-item">
-                                    <h3 className="m1">
-                                        <span>Time</span>
-                                        <span>Game</span>
-                                        <span>Memo</span>
-                                        <span>Setting</span>
-                                    </h3>
-                                </div>
-                            </li>
+                            <div className="time-item ul-header">
+                                <h3 className="m1">
+                                    <span>Time</span>
+                                    <span>Game</span>
+                                    <span>Memo</span>
+                                    <span>Setting</span>
+                                    <span style={{ width: "20px" }} />
+                                </h3>
+                            </div>
                             {times.map((t, index) => (
-                                <li
+                                <TimeItem
                                     key={index}
+                                    time={t}
                                     state={getState(t)}
-                                    onClick={() => manageTime(index)("Dismiss")}>
-                                    <TimeItem
-                                        time={t}
-                                        timeText={timeText(t)}
-                                        itemFn={manageTime(index)}
-                                    />
-                                </li>
+                                    timeText={timeText(t)}
+                                    itemFn={manageTime(index)}
+                                />
                             ))}
-                        </ul>
+                        </div>
 
-                        <button onClick={() => setMdIdx(MODAL_NEW)}>Add Time</button>
+                        <button
+                            style={{ flex: "0 1" }}
+                            onClick={() => setMdIdx(MODAL_NEW)}>
+                            Add Time
+                        </button>
 
                         {mdIdx > MODAL_OFF && (
                             <TimeModal
@@ -497,7 +533,7 @@
                                 onSubmit={updateTime}
                             />
                         )}
-                    </div>
+                    </>
                 );
             }
             createRoot(document.getElementById("root")).render(<App />);
