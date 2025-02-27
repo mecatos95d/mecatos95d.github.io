@@ -414,9 +414,12 @@
 
                 const cmp = (t, cmp = updated) => new Date(t.dest) > cmp;
 
-                function updateTime(time, idx = mdIdx, dismiss = false) {
+                function updateTime(time, idx = mdIdx, dismiss = false, ignore = false) {
                     const newTimes = [...times];
-                    dismiss && !cmp(time) ? (time.dismiss = true) : delete time.dismiss;
+                    !ignore &&
+                        (dismiss && !cmp(time)
+                            ? (time.dismiss = true)
+                            : delete time.dismiss);
                     idx === MODAL_NEW ? newTimes.push(time) : (newTimes[idx] = time);
                     updateTimes(newTimes);
                     setMdIdx(MODAL_OFF);
@@ -444,7 +447,7 @@
                         case "Open":
                             const key = opt.toLowerCase();
                             rt[key] = !rt[key];
-                            updateTime(rt, idx);
+                            updateTime(rt, idx, false, true);
                             return;
                         case "Edit":
                             setMdIdx(idx);
