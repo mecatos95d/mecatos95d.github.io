@@ -116,7 +116,7 @@
                         .catch(e => alert("Failed to copy..."));
 
                 return (
-                    <div className="io modal-footer">
+                    <span>
                         <button onClick={() => setMd("Im")}>Import</button>
                         <button onClick={() => setMd("Ex")}>Export</button>
                         {modal && (
@@ -159,15 +159,15 @@
                                 </div>
                             </Modal>
                         )}
-                    </div>
+                    </span>
                 );
             }
 
-            function TimeItem({ time, itemFn }) {
+            function TimeItem({ time, timeText, itemFn }) {
                 return (
                     <div className="time-item">
                         <h3 className="m1">
-                            <span>{format(time?.dest, 1)}</span>
+                            <span>{timeText}</span>
                             <span>{time?.game ?? ""}</span>
                             <span>{time?.memo ?? ""}</span>
                             <span>
@@ -311,14 +311,8 @@
                                     Next Alarm at:
                                     <div className="dest">{format(obj.dest, 1)}</div>
                                 </label>
-                                <div>
-                                    <input
-                                        type="checkbox"
-                                        checked={obj.fixed}
-                                        onChange={e =>
-                                            updateObj({ fixed: e.target.checked })
-                                        }
-                                    />
+                                <div onClick={() => updateObj({ fixed: !obj.fixed })}>
+                                    <input type="checkbox" checked={obj.fixed} />
                                     <span>Daily Task / Fixed Time</span>
                                 </div>
                                 <Btn disabled={obj.fixed} obj={hm(Math.max(0, objLeft))}>
@@ -345,6 +339,9 @@
                     new Date(localStorage.getItem("updated"))
                 );
                 const [updated, setUpdated] = useState(new Date());
+                const [hideDaily, setHideDaily] = useState(
+                    Number(localStorage.getItem("hide"))
+                );
                 const [times, setTimes] = useState(loadTimes);
                 const [mdIdx, setMdIdx] = useState(MODAL_OFF);
 
@@ -432,13 +429,32 @@
                     new Date("2999")
                 );
 
+                const timeText = time =>
+                    hideDaily && time?.fixed
+                        ? cmp(time)
+                            ? "Ready"
+                            : "Done"
+                        : format(time?.dest, 1);
+
                 return (
                     <div>
                         <h1>Multiple Alarms</h1>
-                        <IO load={load} />
+                        <span className="io">
+                            <span
+                                onClick={() => {
+                                    const newHideDaily = !hideDaily;
+                                    setHideDaily(newHideDaily);
+                                    localStorage.setItem("hide", Number(newHideDaily));
+                                }}>
+                                <input type="checkbox" checked={hideDaily} />
+                                Hide daily alarm time
+                            </span>
+                            <IO load={load} />
+                        </span>
                         {/* <h2>Last Updated</h2> */}
                         <h3>
-                            {times.some(t => !t.fixed && cmp(t)) && `${format(next, 1)} ⇐ `}
+                            {times.some(t => !t.fixed && cmp(t)) &&
+                                `${format(next, 1)} ⇐ `}
                             {format(updatedPrev)}
                             {/* {updatedPrev && " ⇐ " + format(updatedPrev, 3)}
                             <br /> */}
@@ -462,7 +478,11 @@
                                     key={index}
                                     state={getState(t)}
                                     onClick={() => manageTime(index)("Dismiss")}>
-                                    <TimeItem time={t} itemFn={manageTime(index)} />
+                                    <TimeItem
+                                        time={t}
+                                        timeText={timeText(t)}
+                                        itemFn={manageTime(index)}
+                                    />
                                 </li>
                             ))}
                         </ul>

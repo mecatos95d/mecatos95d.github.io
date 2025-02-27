@@ -106,8 +106,15 @@ li {
     }
 }
 
+.io {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
 li button,
 .io button {
+    margin-left: 10px;
     padding: 5px 10px;
     font-size: 0.8rem;
 }
