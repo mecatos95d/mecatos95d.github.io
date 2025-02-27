@@ -339,12 +339,14 @@
                                     <div className="dest">{format(obj.dest, 1)}</div>
                                 </label>
                                 <div
-                                    onClick={() =>
+                                    onClick={() => {
                                         updateObj({
                                             fixed: !obj.fixed,
-                                            exclude: !obj.fixed,
-                                        })
-                                    }>
+                                            ...(idx === MODAL_NEW && {
+                                                exclude: !obj.fixed,
+                                            }),
+                                        });
+                                    }}>
                                     <input type="checkbox" checked={obj.fixed} />
                                     <span>Daily Task / Fixed Time</span>
                                 </div>
