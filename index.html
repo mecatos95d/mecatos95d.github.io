@@ -201,9 +201,7 @@
                                 {time?.fixed && <span class="m1-small">Daily </span>}
                                 {(time?.fixed ? pad2 : pad2hm)(time)}
                             </span>
-                            <span style={{ width: "20px" }}>
-                                {"▼▲"[Number(time?.open ?? 0)]}
-                            </span>
+                            <span className="tri">{"▼▲"[Number(time?.open ?? 0)]}</span>
                         </h3>
                         {time?.open && (
                             <div className="modal-footer">
@@ -359,7 +357,10 @@
                             </div>
                             <div className="modal-footer">
                                 <button
-                                    onClick={() => onSubmit(obj)}
+                                    onClick={() => {
+                                        obj.open = false;
+                                        onSubmit(obj);
+                                    }}
                                     disabled={!updated || obj.h < 0}>
                                     {idx === MODAL_NEW ? "Add" : "Update"} Time
                                 </button>
@@ -390,6 +391,7 @@
                     setUpdatedPrev(new Date(localStorage.getItem("updated")));
                     setUpdated(new Date());
                     setTimes(loadTimes());
+                    setHideDaily(Number(localStorage.getItem("hide")));
                 }
 
                 function refresh() {
@@ -454,9 +456,11 @@
                             return;
                         case "Renew":
                             addTime(rt);
+                            rt.open = false;
                             updateTime(rt, idx);
                             return;
                         case "Dismiss":
+                            rt.open = false;
                             updateTime(rt, idx, true);
                             return;
                         case "🗑️":
@@ -513,7 +517,7 @@
                                     <span>Game</span>
                                     <span>Memo</span>
                                     <span>Setting</span>
-                                    <span style={{ width: "20px" }} />
+                                    <span className="tri" />
                                 </h3>
                             </div>
                             {times.map((t, index) => (
@@ -525,6 +529,7 @@
                                     itemFn={manageTime(index)}
                                 />
                             ))}
+                            <span className="buf" />
                         </div>
 
                         <button

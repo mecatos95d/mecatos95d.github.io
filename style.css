@@ -51,6 +51,10 @@ h3 {
     .m1-small {
         font-size: 0.7rem;
     }
+
+    .tri {
+        width: 20px;
+    }
 }
 
 p {
@@ -126,6 +130,11 @@ button:disabled {
     align-items: center;
     justify-content: space-between;
     z-index: 0;
+
+    .buf {
+        flex: 1;
+        max-height: 100%;
+    }
 }
 
 .io {
@@ -144,7 +153,6 @@ button:disabled {
     padding: 5px 10px;
     font-size: 0.8rem;
 }
-
 
 .ReactModal__Content {
     max-width: 300px;
