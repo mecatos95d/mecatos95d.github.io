@@ -382,6 +382,9 @@
                 const [times, setTimes] = useState(loadTimes);
                 const [mdIdx, setMdIdx] = useState(MODAL_OFF);
 
+                const [scrollDown, setScrollDown] = useState(false);
+                const bufRef = useRef();
+
                 function loadTimes() {
                     const savedTimes = localStorage.getItem("times");
                     return savedTimes ? JSON.parse(savedTimes) : [];
@@ -404,6 +407,11 @@
                     const interval = setInterval(() => refresh(), 30000);
                     return () => clearInterval(interval);
                 }, []);
+
+                useEffect(() => {
+                    scrollDown && bufRef.current.scrollIntoView({ behavior: "smooth" });
+                    setScrollDown(false);
+                }, [scrollDown]);
 
                 function save({ game, memo, h, m, dest, fixed, exclude }) {
                     return { game, memo, h, m, dest, fixed, exclude };
@@ -446,9 +454,11 @@
                             updateTimes(ct);
                             return;
                         case "Exclude":
+                            rt.exclude = !rt.exclude;
+                            updateTime(rt, idx, false, true);
                         case "Open":
-                            const key = opt.toLowerCase();
-                            rt[key] = !rt[key];
+                            rt.open = !rt.open;
+                            setScrollDown(idx === times?.length - 1 && rt.open);
                             updateTime(rt, idx, false, true);
                             return;
                         case "Edit":
@@ -529,7 +539,7 @@
                                     itemFn={manageTime(index)}
                                 />
                             ))}
-                            <span className="buf" />
+                            <span className="buf" ref={bufRef} />
                         </div>
 
                         <button
