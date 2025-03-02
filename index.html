@@ -456,6 +456,7 @@
                         case "Exclude":
                             rt.exclude = !rt.exclude;
                             updateTime(rt, idx, false, true);
+                            return;
                         case "Open":
                             rt.open = !rt.open;
                             setScrollDown(idx === times?.length - 1 && rt.open);
