@@ -77,7 +77,7 @@ button.preset {
     background-color: lightblue;
     padding: 5px;
     border-radius: 3px;
-    margin: 3px;
+    margin: 3px 2px;
 }
 
 button:hover {
