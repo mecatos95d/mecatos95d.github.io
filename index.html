@@ -216,8 +216,8 @@
             }
 
             const TimeBtnDiv = ({ text, list, fn }) => (
-                <div>
-                    {text}
+                <div id={text}>
+                    <span className="time-btn-div">{text}</span>
                     {list.map(fn)}
                 </div>
             );
@@ -328,7 +328,10 @@
                                     </span>
                                     <TILInput
                                         obj={obj}
-                                        list={[["h"], ["m", ":"]]}
+                                        list={[
+                                            [obj.fixed ? "" : "h"],
+                                            [obj.fixed ? "" : "m", ":"],
+                                        ]}
                                         updateObj={updateObj}
                                         num
                                     />

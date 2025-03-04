@@ -80,6 +80,17 @@ button.preset {
     margin: 3px 2px;
 }
 
+#Preset {
+    button.preset {
+        width: 50px;
+    }
+
+    .time-btn-div {
+        display: inline-block;
+        width: 54px;
+    }
+}
+
 button:hover {
     background-color: #48f;
 }
