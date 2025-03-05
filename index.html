@@ -226,10 +226,9 @@
 
             function TILInput({ obj, list, updateObj, num }) {
                 const ref = useRef({});
-                const max = k => (obj.fixed && k === undefined ? 23 : 59);
                 const onChange = k => e => {
                     let v = e.target.value;
-                    if (num) v = Math.max(0, Math.min(max(k), Number(v)));
+                    if (num) v = Math.max(0, Math.min(59, Number(v)));
                     updateObj({ [k]: v });
                 };
 
@@ -239,7 +238,7 @@
                         <input
                             type={num ? "number" : ""}
                             min={0}
-                            max={max(a)}
+                            max={59}
                             ref={el => el && (ref[i] = el)}
                             value={obj[a]}
                             onChange={onChange(a)}
