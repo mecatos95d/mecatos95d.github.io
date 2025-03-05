@@ -503,7 +503,10 @@
 
                 return (
                     <>
-                        <h1>Multiple Alarms</h1>
+                        <h1>
+                            <img src="favicon.ico" alt="Icon" width="24px" />
+                            Multiple Alarms
+                        </h1>
                         <span className="io">
                             <span
                                 onClick={() => {
@@ -547,13 +550,11 @@
                             ))}
                             <span className="buf" ref={bufRef} />
                         </div>
-
                         <button
                             style={{ flex: "0 1" }}
                             onClick={() => setMdIdx(MODAL_NEW)}>
                             Add Time
                         </button>
-
                         {mdIdx > MODAL_OFF && (
                             <TimeModal
                                 idx={mdIdx}
