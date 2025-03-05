@@ -167,6 +167,26 @@
                 );
             }
 
+            function Week({ week }) {
+                return (
+                    <div className="week">
+                        {week.map(day => (
+                            <span className="day">{day}</span>
+                        ))}
+                    </div>
+                );
+            }
+
+            function Calendar({ time }) {
+                return (
+                    <>
+                        <Week week={[..."SMTWTFS"]} />
+                        <>4Weeks</>
+                        <>LastWeek</>
+                    </>
+                );
+            }
+
             function TimeItem({ time, state, timeText, itemFn }) {
                 const itemFnWrap = e => ev => {
                     ev.stopPropagation();
@@ -206,12 +226,15 @@
                             <span className="tri">{"▼▲"[Number(time?.open ?? 0)]}</span>
                         </h3>
                         {time?.open && (
-                            <div className="modal-footer">
-                                {opt(state)}
-                                {["⇓", "⇑", "Edit", "Renew", "🗑️"].map(e => (
-                                    <button onClick={itemFnWrap(e)}>{e}</button>
-                                ))}
-                            </div>
+                            <>
+                                {time?.fixed && <Calendar time={time} />}
+                                <div className="modal-footer">
+                                    {opt(state)}
+                                    {["⇓", "⇑", "Edit", "Renew", "🗑️"].map(e => (
+                                        <button onClick={itemFnWrap(e)}>{e}</button>
+                                    ))}
+                                </div>
+                            </>
                         )}
                     </div>
                 );
