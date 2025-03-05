@@ -226,16 +226,16 @@
 
             function TILInput({ obj, list, updateObj, num }) {
                 const ref = useRef({});
-                const max = k => (obj.fixed && k == "h" ? 23 : 59);
+                const max = k => (obj.fixed && k === undefined ? 23 : 59);
                 const onChange = k => e => {
                     let v = e.target.value;
-                    if ("hm".includes(k)) v = Math.max(0, Math.min(max(k), Number(v)));
+                    if (num) v = Math.max(0, Math.min(max(k), Number(v)));
                     updateObj({ [k]: v });
                 };
 
-                const fd = ([a, b], i) => (
+                const fd = ([a, b, c], i) => (
                     <>
-                        {<span class="fd-txt">{num ? b : a}</span>}
+                        <span class="fd-txt">{num ? b : a}</span>
                         <input
                             type={num ? "number" : ""}
                             min={0}
@@ -247,7 +247,7 @@
                                 ["Enter", "Tab"].includes(e.key) && ref[1 - i]?.focus()
                             }
                         />
-                        {num && <span class="fd-txt">{a}</span>}
+                        {num && <span class="fd-txt">{c}</span>}
                     </>
                 );
                 return list.map((e, i) => (!num ? <label>{fd(e, i)}</label> : fd(e, i)));
@@ -330,10 +330,7 @@
                                     </span>
                                     <TILInput
                                         obj={obj}
-                                        list={[
-                                            obj.fixed ? [] : ["h", "+"],
-                                            [obj.fixed ? "" : "m", ":"],
-                                        ]}
+                                        list={obj.fixed ? ["h", "m:"] : ["h+h", "m:m"]}
                                         updateObj={updateObj}
                                         num
                                     />
