@@ -493,7 +493,7 @@
                 const timeText = time =>
                     hideDaily && time?.fixed
                         ? cmp(time)
-                            ? "Done"
+                            ? "-"
                             : "Ready"
                         : format(time?.dest, 1);
 
