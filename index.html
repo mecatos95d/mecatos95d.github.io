@@ -497,6 +497,15 @@
                             : "Ready"
                         : format(time?.dest, 1);
 
+                const formatCounts = counts =>
+                    counts
+                        .map(([fn, label]) => {
+                            const len = times.filter(fn).length || false;
+                            return len && `${len} ${label}`;
+                        })
+                        .filter(Boolean)
+                        .join(" / ");
+
                 return (
                     <>
                         <h1>
@@ -523,6 +532,22 @@
                             <br /> */}
                             <button onClick={updateNow}>Update Now</button>
                         </h3>
+                        <h4>
+                            <span>
+                                {formatCounts([
+                                    [t => getState(t) === "pass", "Passed"],
+                                    [t => getState(t) === "inactive", "Inactive"],
+                                ])}
+                            </span>
+                            <span>
+                                {times?.length} Alarms
+                                {times?.length > 0 &&
+                                    ` (${formatCounts([
+                                        [t => !t.fixed, "Timed"],
+                                        [t => t.fixed, "Daily"],
+                                    ])})`}
+                            </span>
+                        </h4>
                         {/* <h2>Saved Times</h2> */}
                         <div className="ul">
                             {/* HEADER AREA */}
