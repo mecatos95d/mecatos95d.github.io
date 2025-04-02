@@ -31,7 +31,7 @@
             const MODAL_OFF = -2;
             const MODAL_NEW = -1;
 
-            const BTN_PRESET = [0, 100, 300, 400, 500, 600, 848, 900, 1600, 2000];
+            const BTN_PRESET = [0, 100, 300, 400, 500, 600, 900, 1600, 2000, 130, 848];
             // const BTN_CALC = [38, 54, 800]; // 37.8 for 1h WZ Idle Dig
             const BTN_CALC = [800]; // 37.8 for 1h WZ Idle Dig
 
@@ -288,7 +288,11 @@
                 ];
 
                 const objLeft = Math.ceil((new Date(obj.dest) - new Date()) / ONE_MIN_MS);
-                const preset = e => <Btn obj={hm(e, 100)}>{pad2(hm(e, 100))}</Btn>;
+                const preset = e => (
+                    <Btn obj={hm(e, 100)}>
+                        {e % 100 === 0 ? `${e / 100}h` : pad2(hm(e, 100))}
+                    </Btn>
+                );
                 const calc = e => {
                     const { h, m } = hm(e, 100);
                     const oM = e => ({
