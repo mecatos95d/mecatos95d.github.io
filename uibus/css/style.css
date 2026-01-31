@@ -1,0 +1,500 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+    background: #f5f5f5;
+    color: #333;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 480px;
+    margin: 0 auto;
+    background: #fff;
+    min-height: 100vh;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* 헤더 */
+.header {
+    background: linear-gradient(135deg, #2c3e50, #3498db);
+    color: white;
+    padding: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.header h1 {
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.refresh-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.3s;
+}
+
+.refresh-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.refresh-btn.spinning {
+    animation: spin 0.5s linear;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.current-station {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 12px 15px;
+    border-radius: 10px;
+}
+
+#modeName {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+/* 폴딩 정류장 */
+.station-fold {
+    border-bottom: 1px solid #eee;
+}
+
+.station-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    background: #f8f9fa;
+    transition: background 0.2s;
+}
+
+.station-header:hover {
+    background: #e9ecef;
+}
+
+.fold-icon {
+    font-size: 0.7rem;
+    color: #666;
+    width: 12px;
+}
+
+.station-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    flex: 1;
+}
+
+.station-direction {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.bus-count {
+    font-size: 0.75rem;
+    color: #3498db;
+    font-weight: 600;
+}
+
+/* 도착 목록 - 컴팩트 모드 */
+.arrival-list {
+    padding: 8px 12px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #fff;
+}
+
+.arrival-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fafafa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 8px 10px;
+    flex-wrap: wrap;
+}
+
+.bus-number {
+    color: white;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    min-width: 55px;
+    text-align: center;
+}
+
+.remain-time {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #2c3e50;
+    min-width: 40px;
+}
+
+.remain-time.soon {
+    color: #e74c3c;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.stops-away {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.station-nm {
+    font-size: 0.75rem;
+    color: #666;
+    background: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 4px;
+    width: 80px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.seat-badge {
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.seat-badge.seats-high {
+    background: #d4edda;
+    color: #155724;
+}
+
+.seat-badge.seats-medium {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.seat-badge.seats-low {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.seat-badge.seats-unknown {
+    background: #e9ecef;
+    color: #666;
+}
+
+/* 내 버스 섹션 */
+.my-bus-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #e8f4fd;
+    border-bottom: 1px solid #bee5eb;
+}
+
+.my-bus-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #2c3e50;
+}
+
+.my-bus-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.section-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 8px;
+}
+
+.my-bus-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.my-bus-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #fff;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.my-bus-item:hover {
+    border-color: #3498db;
+}
+
+.my-bus-item.selected {
+    border-color: #3498db;
+    background: #d4edff;
+}
+
+.my-bus-item .plate-no {
+    font-weight: 700;
+    color: #3498db;
+}
+
+.my-bus-item .remain-time {
+    font-weight: 700;
+}
+
+.my-bus-item .vehicle-info {
+    flex: 1;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.my-bus-item .check {
+    color: #3498db;
+    font-weight: 700;
+}
+
+/* 환승 섹션 */
+.transfer-section {
+    padding: 12px 16px;
+}
+
+.transfer-ok {
+    font-size: 0.7rem;
+    color: #28a745;
+    font-weight: 600;
+    padding: 2px 6px;
+    background: #d4edda;
+    border-radius: 4px;
+}
+
+.transfer-close {
+    font-size: 0.7rem;
+    color: #ff9800;
+    font-weight: 600;
+    padding: 2px 6px;
+    background: #fff3e0;
+    border-radius: 4px;
+    animation: pulse 1s infinite;
+}
+
+.transfer-miss {
+    font-size: 0.7rem;
+    color: #dc3545;
+    font-weight: 600;
+    padding: 2px 6px;
+    background: #f8d7da;
+    border-radius: 4px;
+}
+
+/* 통과한 버스 섹션 */
+.passed-section {
+    margin-bottom: 10px;
+    border-bottom: 1px dashed #dee2e6;
+    padding-bottom: 8px;
+}
+
+.passed-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #888;
+    padding: 6px 0;
+}
+
+.passed-header:hover {
+    color: #666;
+}
+
+.passed-list {
+    opacity: 0.6;
+}
+
+.passed-list .arrival-row {
+    transform: scale(0.95);
+}
+
+/* 경합 버스 (1분 30초 이내 차이) */
+.arrival-row.racing {
+    border-left: 4px solid #e74c3c;
+    padding-left: 6px;
+}
+
+/* 상태 버튼 */
+.status-btn {
+    padding: 6px 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.status-btn:hover {
+    border-color: #3498db;
+}
+
+.status-btn.active {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(52, 152, 219, 0.4);
+}
+
+.status-btn:disabled {
+    background: #f5f5f5;
+    color: #bbb;
+    border-color: #ddd;
+    cursor: not-allowed;
+}
+
+/* 노선 태그 */
+.route-tag {
+    font-size: 0.65rem;
+    padding: 2px 5px;
+    background: #9b59b6;
+    color: white;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+/* 차량 상태 */
+.vehicle-status {
+    font-size: 0.7rem;
+    color: #666;
+    margin-left: auto;
+}
+
+/* 차량 등급별 배경색 */
+.arrival-row.grade-premium {
+    background: linear-gradient(135deg, #fff9e6, #fff3cd);
+    border-color: #ffc107;
+}
+
+.arrival-row.grade-charter {
+    background: #e8f5e9;
+    border-color: #81c784;
+}
+
+.arrival-row.grade-unknown {
+    background: #f5f5f5;
+    border-color: #bdbdbd;
+}
+
+.arrival-row.grade-borrowed {
+    background: #fff8e1;
+    border-color: #ffcc80;
+}
+
+.arrival-row.grade-old {
+    background: #fafafa;
+    border-color: #e0e0e0;
+    opacity: 0.7;
+}
+
+.arrival-row.grade-normal {
+    background: #fff;
+}
+
+.no-data {
+    text-align: center;
+    padding: 20px;
+    color: #888;
+    font-size: 0.85rem;
+}
+
+/* 본문 스크롤 영역 */
+.main-scroll {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    min-height: 0;
+    background: #fff;
+    padding-bottom: 60px; /* footer 높이만큼 여유 */
+}
+
+/* 푸터 */
+.footer {
+    padding: 20px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #aaa;
+    background: #f8f9fa;
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 10;
+}
+
+.container {
+    max-width: 480px;
+    margin: 0 auto;
+    background: #fff;
+    min-height: 100vh;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* ================== Topper(상단 고정) ================== */
+.topper {
+    position: sticky;
+    top: 0;
+    z-index: 99;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 0 0 8px 0;
+}
