@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>SSM : SNU Some Menu</title>
+        <style>
+            body {
+                margin: 20px;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                max-width: 800px;
+            }
+            th,
+            td {
+                border: 1px solid #ccc;
+                padding: 10px;
+                text-align: left;
+            }
+            th {
+                background-color: #f4f4f4;
+                width: 150px;
+            }
+            td {
+                width: auto;
+            }
+            .menu-content {
+                font-family: monospace;
+                white-space: pre-wrap;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>SSM : SNU Some Menu</h1>
+        <label for="date">날짜:</label>
+        <input type="date" id="date" />
+        <button onclick="loadMenus()">불러오기</button>
+        <table>
+            <tr>
+                <th>기숙사</th>
+                <td><div class="menu-content" id="dorm-lunch">...</div></td>
+            </tr>
+            <tr>
+                <th>두레미담</th>
+                <td><div class="menu-content" id="dure-lunch">...</div></td>
+            </tr>
+        </table>
+        <script>
+            // 오늘 날짜 설정
+            document.addEventListener("DOMContentLoaded", () => {
+                const today = new Date().toISOString().split("T")[0];
+                document.getElementById("date").value = today;
+                loadMenus();
+            });
+
+            async function loadMenus() {
+                const dateInput = document.getElementById("date");
+                const date = dateInput.value;
+
+                try {
+                    const response = await fetch(
+                        `https://github-io-uibus-proxy.vercel.app/api/menu?date=${date}`
+                    );
+                    const data = await response.json();
+
+                    document.getElementById("dorm-lunch").textContent = data.dorm;
+                    document.getElementById("dure-lunch").textContent = data.dure;
+                } catch (error) {
+                    console.error("Error loading menu:", error);
+                    document.getElementById("dorm-lunch").textContent = "메뉴 로딩 오류";
+                    document.getElementById("dure-lunch").textContent = "메뉴 로딩 오류";
+                }
+            }
+        </script>
+    </body>
+</html>
