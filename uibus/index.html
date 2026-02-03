@@ -40,6 +40,25 @@
             .mode-btn:hover {
                 background: rgba(255, 255, 255, 0.25);
             }
+            .loading {
+                padding: 12px 8px;
+                color: rgba(255, 255, 255, 0.7);
+                text-align: center;
+                font-style: italic;
+            }
+            .loading-main {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 200px;
+                color: white;
+                font-size: 1.2rem;
+                font-weight: bold;
+                background: rgba(0, 0, 0, 0.5);
+                border-radius: 8px;
+                margin: 20px;
+                padding: 20px;
+            }
         </style>
     </head>
     <body>
@@ -48,8 +67,9 @@
             <header class="header">
                 <div class="header-top">
                     <a href="/" class="nav-btn">🏠 MMA</a>
-                    <h1>🚌</h1>
-                    <button class="refresh-btn" onclick="refreshData()">🔄</button>
+                    <h1>🚌 BUS</h1>
+                    <span class="update-time" id="updateTime">업데이트 없음</span>
+                    <button class="refresh-btn" onclick="fetchAllArrivals()">🔄</button>
                 </div>
             </header>
 
@@ -60,11 +80,11 @@
 
             <!-- 푸터: 항상 하단 고정 -->
             <footer class="footer real-footer">
-                <p>Demo Page - 가짜 데이터 사용 중</p>
+                <p>Data from GBIS</p>
             </footer>
         </div>
 
-        <script src="js/mockData.js"></script>
-        <script src="js/app.js"></script>
+        <script type="module" src="js/data.js"></script>
+        <script type="module" src="js/app.js"></script>
     </body>
 </html>
