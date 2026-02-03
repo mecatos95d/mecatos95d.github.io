@@ -328,12 +328,14 @@ function renderArrivalRow(arrival, transferStatus) {
     const stationClass = arrival.stationNm === "의왕톨게이트" ? "station-nm passed-station" : "station-nm";
     const stationDisplay = `<span class="${stationClass}">${formatStationNm(arrival.stationNm)}</span>`;
 
-    // 시간 표시 (10분 밑이면 초 단위)
+    // 시간 표시 (초 단위)
     let timeDisplay;
     if (arrival.predictTimeSec && arrival.predictTimeSec < 600) {
         const min = Math.floor(arrival.predictTimeSec / 60);
         const sec = arrival.predictTimeSec % 60;
         timeDisplay = `${min}:${String(sec).padStart(2, "0")}`;
+    } else if (arrival.predictTimeSec >= 600) {
+        timeDisplay = `${Math.floor(arrival.predictTimeSec / 60)}분`;
     } else {
         timeDisplay = `${arrival.remainMin}분`;
     }
@@ -600,3 +602,4 @@ function formatUpdateTime(date) {
 
 // Global functions for onclick
 window.selectMyBusOption = selectMyBusOption;
+
