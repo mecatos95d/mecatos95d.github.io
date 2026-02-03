@@ -1,598 +1,90 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
     <head>
         <meta charset="UTF-8" />
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0 maximum-scale=1, user-scalable=no"
-        />
-        <title>MMA - Manager of Multiple Alarms</title>
-        <script
-            src="https://unpkg.com/react@18/umd/react.production.min.js"
-            crossorigin
-        ></script>
-        <script
-            src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
-            crossorigin
-        ></script>
-        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/react-modal@3.14.3/dist/react-modal.min.js"></script>
-        <link rel="icon" href="favicon.ico" />
-        <link rel="manifest" href="manifest.json" />
-        <link rel="stylesheet" href="style.css" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>버스 환승 정보</title>
+        <link rel="stylesheet" href="css/style.css" />
+        <style>
+            .nav-btn {
+                font-size: 0.75rem;
+                padding: 6px 12px;
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+                border-radius: 6px;
+                text-decoration: none;
+                transition: background 0.3s;
+            }
+            .nav-btn:hover {
+                background: rgba(255, 255, 255, 0.35);
+            }
+            .mode-tabs {
+                display: flex;
+                gap: 4px;
+            }
+            .mode-btn {
+                font-size: 0.75rem;
+                padding: 6px 12px;
+                background: rgba(255, 255, 255, 0.15);
+                color: rgba(255, 255, 255, 0.7);
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+            .mode-btn.active {
+                background: rgba(255, 255, 255, 0.3);
+                color: white;
+                font-weight: 600;
+            }
+            .mode-btn:hover {
+                background: rgba(255, 255, 255, 0.25);
+            }
+            .loading {
+                padding: 12px 8px;
+                color: rgba(255, 255, 255, 0.7);
+                text-align: center;
+                font-style: italic;
+            }
+            .loading-main {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 200px;
+                color: white;
+                font-size: 1.2rem;
+                font-weight: bold;
+                background: rgba(0, 0, 0, 0.5);
+                border-radius: 8px;
+                margin: 20px;
+                padding: 20px;
+            }
+        </style>
     </head>
     <body>
-        <div id="root"></div>
-        <script type="text/babel">
-            const { createRoot } = ReactDOM;
-            const { useEffect, useState, useRef } = React;
-            const Modal = window.ReactModal;
-
-            const MODAL_OFF = -2;
-            const MODAL_NEW = -1;
-
-            const BTN_PRESET = [0, 300, 400, 500, 1600, 2000, 30, 48, 130, 536, 848];
-            // const BTN_CALC = [38, 54, 800]; // 37.8 for 1h WZ Idle Dig
-            const BTN_CALC = [20, 400];
-
-            const ONE_MIN_MS = 6e4;
-            const ONE_DAY_MS = 864e5;
-
-            const LARGE_DATE = new Date("2999");
-
-            const hm = (e, div = 60) => ({ h: (e / div) | 0, m: e % div });
-
-            const pad = e => e?.toString()?.padStart(2, "0") ?? "--";
-            const pad2 = e => `${pad(e?.h)}:${pad(e?.m)}`;
-            const pad2hm = e => `${pad(e?.h)}h:${pad(e?.m)}m`;
-
-            const epoch = (e = new Date()) =>
-                Math.floor((e - e.getTimezoneOffset() * ONE_MIN_MS) / ONE_DAY_MS);
-
-            function addTime(x) {
-                const now = new Date();
-                // H, M Limitation
-                x.h = Math.max(0, Math.min(x.fixed ? 23 : 59, x.h));
-                x.m = Math.max(0, Math.min(59, x.m));
-
-                now.setSeconds(0);
-                if (x.fixed) {
-                    now.setHours(x.h);
-                    now.setMinutes(x.m);
-                    if (now < new Date()) now.setDate(now.getDate() + 1);
-                    x.dest = now;
-                    return true;
-                } else {
-                    now.setHours(now.getHours() + x.h);
-                    now.setMinutes(now.getMinutes() + x.m);
-                    x.dest = now;
-                    return x.h || x.m;
-                }
-            }
-
-            function format(date, v = 0) {
-                if (typeof date === "string") date = new Date(date);
-                const [day, hours, minutes] = ["Date", "Hours", "Minutes"].map(fn =>
-                    pad(date?.["get" + fn]?.())
-                );
-                const dayDf = epoch(date) - epoch();
-
-                switch (v) {
-                    case 0:
-                        return `DAY ${day} | ${hours}:${minutes}`;
-                    case 1:
-                        return `${dayDf > 0 ? `+${dayDf}d ` : ""}${hours}:${minutes}`;
-                    case 2:
-                        return `${dayDf < 0 ? `-${-dayDf}d ` : ""}${hours}:${minutes}`;
-                    case 3: // 1d = 86400000 = 864e5
-                        return `${hours}:${minutes}${
-                            new Date() - date >= ONE_DAY_MS ? " (OLD)" : ""
-                        }`;
-                }
-            }
-
-            function IO({ load }) {
-                const [modal, setMd] = useState(undefined);
-                const [field, setFd] = useState("");
-
-                // Base64
-                const b64 = () =>
-                    btoa(unescape(encodeURIComponent(JSON.stringify(localStorage))));
-                function importD() {
-                    try {
-                        Object.entries(
-                            JSON.parse(decodeURIComponent(escape(atob(field))))
-                        ).forEach(([key, value]) => localStorage.setItem(key, value));
-                        load();
-                        alert("Imported successfully!");
-                        setMd(undefined);
-                    } catch (e) {
-                        alert("Failed to import...");
-                    }
-                }
-
-                useEffect(() => setFd(""), [modal]);
-
-                const onCopy = () =>
-                    navigator.clipboard
-                        .writeText(b64())
-                        .then(() => alert("Copied successfully!"))
-                        .catch(e => alert("Failed to copy..."));
-
-                return (
-                    <span>
-                        <button onClick={() => setMd("Im")}>Import</button>
-                        <button onClick={() => setMd("Ex")}>Export</button>
-                        {modal && (
-                            <Modal
-                                isOpen
-                                onRequestClose={() => setMd(undefined)}
-                                ariaHideApp={false} // a11y 오류 방지
-                                contentLabel="IO Modal">
-                                <div className="modal-content">
-                                    <div className="modal-header">
-                                        <h2>{modal}port</h2>
-                                    </div>
-                                    <div className="modal-body">
-                                        <h3>
-                                            <input
-                                                readonly={modal === "Ex"}
-                                                value={modal === "Ex" ? b64() : field}
-                                                onChange={e => setFd(e.target.value)}
-                                            />
-                                            {modal === "Ex" && (
-                                                <div className="io">
-                                                    <button
-                                                        onClick={onCopy}
-                                                        children="Copy"
-                                                    />
-                                                </div>
-                                            )}
-                                        </h3>
-                                    </div>
-                                    <div className="modal-footer">
-                                        {modal === "Im" && (
-                                            <button disabled={!field} onClick={importD}>
-                                                Import
-                                            </button>
-                                        )}
-                                        <button onClick={() => setMd(undefined)}>
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </div>
-                            </Modal>
-                        )}
-                    </span>
-                );
-            }
-
-            function TimeItem({ time, state, timeText, itemFn }) {
-                const itemFnWrap = e => ev => {
-                    ev.stopPropagation();
-                    itemFn(e);
-                };
-
-                const opt = state => {
-                    switch (state) {
-                        case "pass":
-                            return (
-                                <button onClick={itemFnWrap("Dismiss")}>Dismiss</button>
-                            );
-                        case "inactive":
-                        case undefined:
-                            return (
-                                <span onClick={itemFnWrap("Exclude")}>
-                                    <input type="checkbox" checked={time.exclude} />
-                                    Exclude
-                                </span>
-                            );
-                    }
-                };
-
-                return (
-                    <div
-                        className="time-item"
-                        state={state}
-                        onClick={() => itemFn("Open")}>
-                        <h3 className="m1">
-                            <span>{timeText}</span>
-                            <span>{time?.game ?? ""}</span>
-                            <span>{time?.memo ?? ""}</span>
-                            <span>
-                                {time?.fixed && <span class="m1-small">Daily </span>}
-                                {(time?.fixed ? pad2 : pad2hm)(time)}
-                            </span>
-                            <span className="tri">{"▼▲"[Number(time?.open ?? 0)]}</span>
-                        </h3>
-                        {time?.open && (
-                            <div className="modal-footer">
-                                {opt(state)}
-                                {["⇓", "⇑", "Edit", "Renew", "🗑️"].map(e => (
-                                    <button onClick={itemFnWrap(e)}>{e}</button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                );
-            }
-
-            const TimeBtnDiv = ({ text, list, fn }) => (
-                <div id={text}>
-                    <span className="time-btn-div">{text}</span>
-                    {list.map(fn)}
+        <div class="container">
+            <!-- 헤더 -->
+            <header class="header">
+                <div class="header-top">
+                    <a href="/" class="nav-btn">🏠 MMA</a>
+                    <h1>🚌 BUS</h1>
+                    <span class="update-time" id="updateTime">업데이트 없음</span>
+                    <button class="refresh-btn" onclick="fetchAllArrivals()">🔄</button>
                 </div>
-            );
+            </header>
 
-            function TILInput({ obj, list, updateObj, num }) {
-                const ref = useRef({});
-                const onChange = k => e => {
-                    let v = e.target.value;
-                    if (num) v = Math.max(0, Math.min(59, Number(v)));
-                    updateObj({ [k]: v });
-                };
+            <!-- 본문: 스크롤 영역 -->
+            <main id="stationList" class="main-scroll">
+                <!-- 동적 렌더링 -->
+            </main>
 
-                const fd = ([a, b, c], i) => (
-                    <>
-                        <span class="fd-txt">{num ? b : a}</span>
-                        <input
-                            type={num ? "number" : ""}
-                            min={0}
-                            max={59}
-                            ref={el => el && (ref[i] = el)}
-                            value={obj[a]}
-                            onChange={onChange(a)}
-                            onKeyDown={e =>
-                                ["Enter", "Tab"].includes(e.key) && ref[1 - i]?.focus()
-                            }
-                        />
-                        {num && <span class="fd-txt">{c}</span>}
-                    </>
-                );
-                return list.map((e, i) => (!num ? <label>{fd(e, i)}</label> : fd(e, i)));
-            }
+            <!-- 푸터: 항상 하단 고정 -->
+            <footer class="footer real-footer">
+                <p>Data from GBIS</p>
+            </footer>
+        </div>
 
-            function TimeModal({ idx, init, onClose, onSubmit }) {
-                const [updated, setUpdated] = useState(false);
-                const [obj, setObj] = useState(
-                    init ?? {
-                        game: "",
-                        memo: "",
-                        h: 0,
-                        m: 0,
-                        dest: new Date(),
-                        fixed: false,
-                        exclude: false,
-                    }
-                );
-
-                const updateObj = e =>
-                    setObj(o => {
-                        const r = { ...o, ...e };
-                        setUpdated(addTime(r));
-                        return r;
-                    });
-
-                const Btn = ({ children, disabled, obj }) => (
-                    <button
-                        className="preset"
-                        disabled={disabled}
-                        onClick={() => updateObj(obj)}>
-                        {children}
-                    </button>
-                );
-
-                const BP = [
-                    ["-", -1],
-                    ["+", 1],
-                ];
-
-                const objLeft = Math.ceil((new Date(obj.dest) - new Date()) / ONE_MIN_MS);
-                const preset = e => (
-                    <Btn obj={hm(e, 100)}>
-                        {e % 100 === 0 ? `${e / 100}h` : pad2(hm(e, 100))}
-                    </Btn>
-                );
-                const calc = e => {
-                    const { h, m } = hm(e, 100);
-                    const oM = e => ({
-                        h: obj.h + e * h + Math.floor((obj.m + e * m) / 60),
-                        m: (obj.m + e * m + 60) % 60,
-                    });
-                    return (
-                        <div className="h3">
-                            {pad2({ h, m })}
-                            {BP.map(([a, b]) => (
-                                <Btn key={e * b} obj={oM(b)} children={a} />
-                            ))}
-                        </div>
-                    );
-                };
-
-                return (
-                    <Modal
-                        isOpen={idx > MODAL_OFF}
-                        onRequestClose={onClose}
-                        ariaHideApp={false} // a11y 오류 방지
-                        contentLabel="Add Time Modal">
-                        <div className="modal-content">
-                            <div className="modal-header">
-                                <h2>{idx > MODAL_NEW ? "Edit #" + idx : "Add new"}</h2>
-                            </div>
-                            <div className="modal-body">
-                                <div className="text-input">
-                                    <TILInput
-                                        obj={obj}
-                                        list={[["game"], ["memo"]]}
-                                        updateObj={updateObj}
-                                    />
-                                </div>
-                                <label>
-                                    <span class="pre-til">
-                                        {obj.fixed ? "Daily" : "Duration"}
-                                    </span>
-                                    <TILInput
-                                        obj={obj}
-                                        list={obj.fixed ? ["h", "m:"] : ["h+h", "m:m"]}
-                                        updateObj={updateObj}
-                                        num
-                                    />
-                                </label>
-                                <label>
-                                    Next Alarm at:
-                                    <div className="dest">{format(obj.dest, 1)}</div>
-                                </label>
-                                <div
-                                    onClick={() => {
-                                        updateObj({
-                                            fixed: !obj.fixed,
-                                            ...(idx === MODAL_NEW && {
-                                                exclude: !obj.fixed,
-                                            }),
-                                        });
-                                    }}>
-                                    <input type="checkbox" checked={obj.fixed} />
-                                    <span>Daily Task / Fixed Time</span>
-                                </div>
-                                <Btn disabled={obj.fixed} obj={hm(Math.max(0, objLeft))}>
-                                    LOAD
-                                </Btn>
-                                <TimeBtnDiv text="Preset" list={BTN_PRESET} fn={preset} />
-                                <TimeBtnDiv text="Calculator" list={BTN_CALC} fn={calc} />
-                            </div>
-                            <div className="modal-footer">
-                                <button
-                                    onClick={() => {
-                                        obj.open = false;
-                                        onSubmit(obj);
-                                    }}
-                                    disabled={!updated || obj.h < 0}>
-                                    {idx === MODAL_NEW ? "Add" : "Update"} Time
-                                </button>
-                                <button onClick={onClose}>Cancel</button>
-                            </div>
-                        </div>
-                    </Modal>
-                );
-            }
-
-            function App() {
-                const [updatedPrev, setUpdatedPrev] = useState(
-                    new Date(localStorage.getItem("updated"))
-                );
-                const [updated, setUpdated] = useState(new Date());
-                const [hideDaily, setHideDaily] = useState(
-                    Number(localStorage.getItem("hide"))
-                );
-                const [times, setTimes] = useState(loadTimes);
-                const [mdIdx, setMdIdx] = useState(MODAL_OFF);
-
-                const [scrollDown, setScrollDown] = useState(false);
-                const bufRef = useRef();
-
-                function loadTimes() {
-                    const savedTimes = localStorage.getItem("times");
-                    return savedTimes ? JSON.parse(savedTimes) : [];
-                }
-
-                function load() {
-                    setUpdatedPrev(new Date(localStorage.getItem("updated")));
-                    setUpdated(new Date());
-                    setTimes(loadTimes());
-                    setHideDaily(Number(localStorage.getItem("hide")));
-                }
-
-                function refresh() {
-                    localStorage.setItem("updated", new Date());
-                    setUpdated(new Date());
-                }
-
-                useEffect(() => {
-                    localStorage.setItem("updated", new Date());
-                    const interval = setInterval(() => refresh(), 30000);
-                    return () => clearInterval(interval);
-                }, []);
-
-                useEffect(() => {
-                    scrollDown && bufRef.current.scrollIntoView({ behavior: "smooth" });
-                    setScrollDown(false);
-                }, [scrollDown]);
-
-                function save({ game, memo, h, m, dest, fixed, exclude }) {
-                    return { game, memo, h, m, dest, fixed, exclude };
-                }
-
-                function updateTimes(newTimes) {
-                    setTimes(newTimes);
-                    localStorage.setItem("times", JSON.stringify(newTimes.map(save)));
-                }
-
-                const cmp = (t, cmp = updated) => new Date(t.dest) > cmp;
-
-                function updateTime(time, idx = mdIdx, dismiss = false, ignore = false) {
-                    const newTimes = [...times];
-                    !ignore &&
-                        (dismiss && !cmp(time)
-                            ? (time.dismiss = true)
-                            : delete time.dismiss);
-                    idx === MODAL_NEW ? newTimes.push(time) : (newTimes[idx] = time);
-                    updateTimes(newTimes);
-                    setMdIdx(MODAL_OFF);
-                }
-
-                function getState(t) {
-                    if (!cmp(t))
-                        // updatedPrev = undef then false
-                        return !t.dismiss && cmp(t, updatedPrev) ? "pass" : "inactive";
-                    return undefined;
-                }
-
-                const manageTime = idx => opt => {
-                    const rt = { ...times[idx] };
-                    switch (opt) {
-                        case "⇑":
-                        case "⇓":
-                            const idxN = idx + (opt === "⇑" ? -1 : 1);
-                            if (idxN < 0 || idxN >= times.length) return;
-                            const ct = [...times];
-                            [ct[idx], ct[idxN]] = [ct[idxN], ct[idx]];
-                            updateTimes(ct);
-                            return;
-                        case "Exclude":
-                            rt.exclude = !rt.exclude;
-                            updateTime(rt, idx, false, true);
-                            return;
-                        case "Open":
-                            rt.open = !rt.open;
-                            setScrollDown(idx === times?.length - 1 && rt.open);
-                            updateTime(rt, idx, false, true);
-                            return;
-                        case "Edit":
-                            setMdIdx(idx);
-                            return;
-                        case "Renew":
-                            addTime(rt);
-                            rt.open = false;
-                            updateTime(rt, idx);
-                            return;
-                        case "Dismiss":
-                            rt.open = false;
-                            updateTime(rt, idx, true);
-                            return;
-                        case "🗑️":
-                            updateTimes(times.filter((_, i) => i !== idx));
-                            return;
-                    }
-                };
-
-                function updateNow() {
-                    setUpdatedPrev(new Date());
-                    refresh();
-                }
-                const next = times.reduce(
-                    (a, t) => (!t.exclude && cmp(t) && !cmp(t, a) ? new Date(t.dest) : a),
-                    LARGE_DATE
-                );
-
-                const timeText = time =>
-                    hideDaily && time?.fixed
-                        ? cmp(time)
-                            ? "-"
-                            : "Ready"
-                        : format(time?.dest, 1);
-
-                const formatCounts = counts =>
-                    counts
-                        .map(([fn, label]) => {
-                            const len = times.filter(fn).length || false;
-                            return len && `${len} ${label}`;
-                        })
-                        .filter(Boolean)
-                        .join(" / ");
-
-                return (
-                    <>
-                        <h1>
-                            <img src="favicon.ico" alt="Icon" width="24px" />
-                            Multiple Alarms
-                            <a href="/uibus/" style={{marginLeft: 'auto', fontSize: '0.8rem', padding: '4px 10px', background: '#3498db', color: '#fff', borderRadius: '4px', textDecoration: 'none'}}>🚌 Bus</a>
-                        </h1>
-                        <span className="io">
-                            <span
-                                onClick={() => {
-                                    const newHideDaily = !hideDaily;
-                                    setHideDaily(newHideDaily);
-                                    localStorage.setItem("hide", Number(newHideDaily));
-                                }}>
-                                <input type="checkbox" checked={hideDaily} />
-                                Hide daily alarm time
-                            </span>
-                            <IO load={load} />
-                        </span>
-                        {/* <h2>Last Updated</h2> */}
-                        <h3>
-                            {next !== LARGE_DATE && `${format(next, 1)} ⇐ `}
-                            {format(updatedPrev)}
-                            {/* {updatedPrev && " ⇐ " + format(updatedPrev, 3)}
-                            <br /> */}
-                            <button onClick={updateNow}>Update Now</button>
-                        </h3>
-                        <h4>
-                            <span>
-                                {formatCounts([
-                                    [t => getState(t) === "pass", "Passed"],
-                                    [t => getState(t) === "inactive", "Inactive"],
-                                ])}
-                            </span>
-                            <span>
-                                {times?.length} Alarms
-                                {times?.length > 0 &&
-                                    ` (${formatCounts([
-                                        [t => !t.fixed, "Timed"],
-                                        [t => t.fixed, "Daily"],
-                                    ])})`}
-                            </span>
-                        </h4>
-                        {/* <h2>Saved Times</h2> */}
-                        <div className="ul">
-                            {/* HEADER AREA */}
-                            <div className="time-item ul-header">
-                                <h3 className="m1">
-                                    <span>Time</span>
-                                    <span>Game</span>
-                                    <span>Memo</span>
-                                    <span>Setting</span>
-                                    <span className="tri" />
-                                </h3>
-                            </div>
-                            {times.map((t, index) => (
-                                <TimeItem
-                                    key={index}
-                                    time={t}
-                                    state={getState(t)}
-                                    timeText={timeText(t)}
-                                    itemFn={manageTime(index)}
-                                />
-                            ))}
-                            <span className="buf" ref={bufRef} />
-                        </div>
-                        <button
-                            style={{ flex: "0 1" }}
-                            onClick={() => setMdIdx(MODAL_NEW)}>
-                            Add Time
-                        </button>
-                        {mdIdx > MODAL_OFF && (
-                            <TimeModal
-                                idx={mdIdx}
-                                init={times[mdIdx]}
-                                onClose={() => setMdIdx(MODAL_OFF)}
-                                onSubmit={updateTime}
-                            />
-                        )}
-                    </>
-                );
-            }
-            createRoot(document.getElementById("root")).render(<App />);
-        </script>
+        <script type="module" src="js/data.js"></script>
+        <script type="module" src="js/app.js"></script>
     </body>
 </html>

@@ -1,8 +1,36 @@
+import {
+    ROUTE_CONFIG,
+    MODES,
+    BUS_VEHICLE_INFO,
+    ARRIVAL_INFO,
+    FAVORITES,
+} from "./data.js";
+import { JS_VEHICLE_INFO } from "./js.js";
+
+// BUS_VEHICLE_INFO, JS_VEHICLE_INFO 병합 (수동 데이터 우선)
+const VEHICLE_INFO = { ...BUS_VEHICLE_INFO, ...JS_VEHICLE_INFO };
+
+// 노선 번호로 회사 구분 (회사 코드: jb=제부여객, kw=경원여객, yn=용남고속, kj=경진여객)
+// 차량 번호 정규화 (한글 → 영어)
+function normalizeVehicleId(vehicleId) {
+    return vehicleId
+        .replace(/사/g, "sa")
+        .replace(/바/g, "ba")
+        .replace(/아/g, "a")
+        .replace(/자/g, "ja")
+        .replace(/차/g, "cha")
+        .replace(/카/g, "ka")
+        .replace(/타/g, "ta")
+        .replace(/파/g, "pa")
+        .replace(/하/g, "ha");
+}
+
 let currentMode = "commute";
 let expandedStations = new Set();
 let myBusStatus = "alighted"; // 'alighted', 'bus1', 'bus2'
 let selectedMyBus = null; // 내가 탄 3102 차량
 let showMissed = false; // 놓친 버스 펼치기
+let isLoading = true; // 초기 로딩 상태 (true면 로딩 UI 표시)
 
 // API 설정
 const STATION_IDS = {
@@ -12,12 +40,23 @@ const STATION_IDS = {
 // 실시간 도착정보 저장
 let LIVE_ARRIVAL_INFO = {};
 
+// 마지막 업데이트 시간
+let lastUpdateTime = null;
+
 // API 프록시 base URL (Vercel 프록시로 고정)
 const API_BASE = "https://github-io-uibus-proxy.vercel.app";
 
 // 초기화
 document.addEventListener("DOMContentLoaded", async () => {
+    // 초기 로드 시간 설정
+    lastUpdateTime = new Date();
+    // 초기에는 로딩 화면을 보여줍니다.
+    renderStations(); // 초기 렌더링 (업데이트 시간 표시)
+
     await fetchAllArrivals();
+    // 데이터 로드 완료
+    isLoading = false;
+    lastUpdateTime = new Date();
     setMode("commute");
 });
 
@@ -45,8 +84,23 @@ function setMode(mode) {
 
 // 정류장 목록 렌더링 (폴딩)
 function renderStations() {
-    const stations = MODES[currentMode].stations;
+    // 업데이트 시간 표시
+    const updateTimeEl = document.getElementById("updateTime");
+    if (updateTimeEl) {
+        updateTimeEl.textContent = lastUpdateTime
+            ? formatUpdateTime(lastUpdateTime)
+            : "업데이트 없음";
+    }
+
     const container = document.getElementById("stationList");
+
+    // 로딩 중이면 중앙에 하나의 Loading 텍스트만 보여줍니다.
+    if (isLoading) {
+        container.innerHTML = `<div class="loading-main">LOADING…</div>`;
+        return;
+    }
+
+    const stations = MODES[currentMode].stations;
 
     container.innerHTML = stations
         .map(station => {
@@ -58,13 +112,7 @@ function renderStations() {
 
             // 폴딩 헤더 임시 주석처리: 헤더 없이 내부 내용만 표시
             return `
-            <div class="station-fold">
-                <!-- <div class="station-header" onclick="toggleStation('${station.id}')">
-                    <span class="fold-icon">${isExpanded ? "▼" : "▶"}</span>
-                    <span class="station-name">${station.name}</span>
-                    <span class="station-direction">${station.direction}</span>
-                    <span class="bus-count">${transferArrivals.length}대</span>
-                </div> -->
+            <div class="station-fold ${station.name === "의왕톨게이트" ? "passed" : ""}">
                 ${renderStationContent(station)}
             </div>
         `;
@@ -84,15 +132,17 @@ function toggleStation(stationId) {
 
 // 정류장 내용 렌더링
 function renderStationContent(station) {
+    // 로딩 중이면 로딩 UI만 표시
+    if (isLoading) {
+        return `<div class="loading">Loading…</div>`;
+    }
     // LIVE_ARRIVAL_INFO 우선
     const arrivals = LIVE_ARRIVAL_INFO[station.id] || ARRIVAL_INFO[station.id] || [];
 
     // 3102 환승 정류장인 경우
     if (station.hasMyBus) {
         const myBusArrivals = arrivals.filter(a => a.busNo === station.myBusRoute);
-        const transferArrivals = arrivals
-            .filter(a => a.busNo !== station.myBusRoute)
-            .sort((a, b) => a.remainMin - b.remainMin);
+        const transferArrivals = arrivals.sort((a, b) => (a.predictTimeSec || 0) - (b.predictTimeSec || 0));
 
         return `
       ${renderMyBusSelector(myBusArrivals, station.myBusRoute)}
@@ -101,7 +151,7 @@ function renderStationContent(station) {
     }
 
     // 일반 정류장
-    return renderArrivalList(arrivals.sort((a, b) => a.remainMin - b.remainMin));
+    return renderArrivalList(arrivals.sort((a, b) => (a.predictTimeSec || 0) - (b.predictTimeSec || 0)));
 }
 
 // 내 버스 선택기 렌더링 (3버튼)
@@ -109,15 +159,10 @@ function renderMyBusSelector(myBusArrivals, routeName) {
     // 직후/다다음 버스 정보
     const bus1 = myBusArrivals[0];
     const bus2 = myBusArrivals[1];
-    // 10분 미만이면 m:ss, 아니면 분
+    // 분 단위로 고정 표시 (차번 포함)
     function formatRemain(bus) {
         if (!bus) return "없음";
-        if (bus.remainMin < 10 && bus.predictTimeSec) {
-            const min = Math.floor(bus.predictTimeSec / 60);
-            const sec = bus.predictTimeSec % 60;
-            return `${min}:${String(sec).padStart(2, "0")} (${bus.plateNo})`;
-        }
-        return `${bus.remainMin}분 (${bus.plateNo})`;
+        return `${bus.remainMin}분 (${bus.plateNo.slice(-4)})`;
     }
     const bus1Label = formatRemain(bus1);
     const bus2Label = formatRemain(bus2);
@@ -186,106 +231,32 @@ function renderTransferList(arrivals) {
         return '<div class="no-data">환승 가능 버스 없음</div>';
     }
 
-    // 시간 필터링: 하차=15분, 다음차/다다음차=3102도착+10분
+    // 시간 필터링: 하차=15분, 다음차/다다음차=선택차 -1분 ~ 선택차 +10분
     let maxMinutes;
+    let minMinutes = 0;
     if (myBusStatus === "alighted" || !selectedMyBus) {
         maxMinutes = 15;
     } else {
+        minMinutes = selectedMyBus.remainMin - 1;
         maxMinutes = selectedMyBus.remainMin + 10;
     }
-    arrivals = arrivals.filter(a => a.remainMin <= maxMinutes);
+    arrivals = arrivals.filter(
+        a => a.remainMin >= minMinutes && a.remainMin <= maxMinutes
+    );
 
     if (arrivals.length === 0) {
-        return '<div class="no-data">표시할 버스 없음 (${maxMinutes}분 이내)</div>';
+        return '<div class="no-data">시간 필터링 후 환승 가능 버스 없음</div>';
     }
 
-    // 노선별로 그룹핑 후 환승 가능한 버스 최대 2대 선택
-    const byRoute = {};
-    arrivals.forEach(a => {
-        if (!byRoute[a.busNo]) byRoute[a.busNo] = [];
-        byRoute[a.busNo].push(a);
-    });
+    // 시간순 정렬 (predictTimeSec 우선)
+    arrivals = arrivals.sort(
+        (a, b) => (a.predictTimeSec || 0) - (b.predictTimeSec || 0)
+    );
 
-    // 각 노선에서 환승 가능한 버스 최대 2대 찾기
-    let available = [];
-    let close = [];
-    let missed = [];
+    // 최대 20대 제한
+    const limitedArrivals = arrivals.slice(0, 25);
 
-    Object.entries(byRoute).forEach(([routeNo, buses]) => {
-        // 시간순 정렬
-        buses.sort((a, b) => a.remainMin - b.remainMin);
-
-        // 최대 2대 선택 (ok/close 우선)
-        let selected = [];
-
-        for (const bus of buses) {
-            if (selected.length >= 2) break;
-            const status = getTransferStatus(bus.remainMin);
-            if (status === "ok" || status === "close") {
-                selected.push({ ...bus, _status: status });
-            }
-        }
-
-        // ok/close가 2대 미만이면 missed에서 채우기
-        if (selected.length < 2) {
-            for (const bus of buses) {
-                if (selected.length >= 2) break;
-                const status = getTransferStatus(bus.remainMin);
-                if (
-                    status === "missed" &&
-                    !selected.find(s => s.plateNo === bus.plateNo)
-                ) {
-                    selected.push({ ...bus, _status: "missed" });
-                }
-            }
-        }
-
-        // 분류
-        selected.forEach(bus => {
-            if (bus._status === "ok") available.push(bus);
-            else if (bus._status === "close") close.push(bus);
-            else missed.push(bus);
-        });
-    });
-
-    // 각 그룹 내 시간순 정렬
-    available.sort((a, b) => a.remainMin - b.remainMin);
-    close.sort((a, b) => a.remainMin - b.remainMin);
-    missed.sort((a, b) => a.remainMin - b.remainMin);
-
-    // 최대 10대 제한
-    const allBuses = [...available, ...close, ...missed];
-    const limitedBuses = allBuses.slice(0, 10);
-
-    // 다시 분류
-    available = limitedBuses.filter(b => b._status === "ok");
-    close = limitedBuses.filter(b => b._status === "close");
-    missed = limitedBuses.filter(b => b._status === "missed");
-
-    return `
-    <div class="transfer-section">
-      <div class="section-title">🔄 환승 버스 <span style="font-size:0.8em;color:#888">(${maxMinutes}분 이내)</span></div>
-      ${missed.length > 0 ? renderPassedSection(missed) : ""}
-      <div class="arrival-list">
-        ${close.map(a => renderArrivalRow(a, "close")).join("")}
-        ${available.map(a => renderArrivalRow(a, "ok")).join("")}
-      </div>
-    </div>
-  `;
-}
-
-// 환승 상태 판별
-function getTransferStatus(busRemainMin) {
-    // 하차완료면 전부 가능
-    if (myBusStatus === "alighted" || !selectedMyBus) {
-        return "ok";
-    }
-
-    const diff = busRemainMin - selectedMyBus.remainMin;
-
-    if (diff >= 2) return "ok"; // 2분+ 여유 → 확정 가능
-    if (diff >= -1) return "close"; // -1 ~ +1분 → 아슬아슬
-    return "missed"; // 2분+ 먼저 옴 → 확정 놓침
+    return `<div class="arrival-list">${limitedArrivals.map(a => renderArrivalRow(a, false)).join("")}</div>`;
 }
 
 // 통과한 버스 섹션 (폴딩, 위쪽 배치)
@@ -294,7 +265,7 @@ function renderPassedSection(passed) {
     <div class="passed-section">
       <div class="passed-header" onclick="toggleMissed()">
         <span>${showMissed ? "▼" : "▶"}</span>
-        <span>통과한 버스 (${passed.length}노선)</span>
+        <span>지나간 버스 (${passed.length}대)</span>
       </div>
       ${showMissed ? `<div class="arrival-list passed-list">${passed.map(a => renderArrivalRow(a, "missed")).join("")}</div>` : ""}
     </div>
@@ -313,15 +284,19 @@ function renderArrivalList(arrivals) {
         return '<div class="no-data">도착 예정 버스가 없습니다</div>';
     }
 
-    // 임시: 스크롤 테스트용으로 3배 복제
-    const tripleArrivals = [...arrivals, ...arrivals, ...arrivals];
+    // 임시: 스크롤 테스트용으로 3배 복제 (predictTimeSec 정렬)
+    const tripleArrivals = [...arrivals, ...arrivals, ...arrivals].sort(
+        (a, b) => (a.predictTimeSec || 0) - (b.predictTimeSec || 0)
+    );
     return `<div class="arrival-list">${tripleArrivals.map(a => renderArrivalRow(a, false)).join("")}</div>`;
 }
 
 // 도착 정보 행 렌더링
 function renderArrivalRow(arrival, transferStatus) {
     const routeConfig = ROUTE_CONFIG[arrival.busNo] || { color: "#e91e63" }; // 미등록 노선 핀크
-    const vehicleInfo = BUS_VEHICLE_INFO[arrival.plateNo] || {};
+    const displayBusNo = arrival.busNo.replace(/\(예약\)/g, '+');
+    const normalizedPlateNo = normalizeVehicleId(arrival.plateNo).replace(/^[^0-9a-z]*/, '');
+    const vehicleInfo = VEHICLE_INFO[normalizedPlateNo] || VEHICLE_INFO[arrival.plateNo.replace(/[^0-9]/g, '')] || {};
     const favorite = FAVORITES[arrival.plateNo];
     const isSoon = arrival.remainMin <= 3;
 
@@ -334,17 +309,8 @@ function renderArrivalRow(arrival, transferStatus) {
         isRacing = Math.abs(diffSec) <= 90; // 1분 30초 이내
     }
 
-    // 환승 상태 표시
-    let transferBadge = "";
-    if ((myBusStatus === "bus1" || myBusStatus === "bus2") && selectedMyBus) {
-        if (transferStatus === "ok") {
-            transferBadge = '<span class="transfer-ok">✓ 가능</span>';
-        } else if (transferStatus === "close") {
-            transferBadge = '<span class="transfer-close">⚠️ 아슬아슬</span>';
-        } else if (transferStatus === "missed") {
-            transferBadge = '<span class="transfer-miss">✗ 통과</span>';
-        }
-    }
+    // 환승 상태 표시 - 차번 뒷 4자리 항상 표시
+    const plateLast4 = `<span class="plate-last4">${arrival.plateNo.slice(-4)}</span>`;
 
     // 차량 상태 판별
     let vehicleStatus = getVehicleStatus(arrival, vehicleInfo, favorite);
@@ -359,11 +325,12 @@ function renderArrivalRow(arrival, transferStatus) {
         : "";
 
     // 정류장 이름 표시
-    const stationDisplay = `<span class="station-nm">${formatStationNm(arrival.stationNm)}</span>`;
+    const stationClass = arrival.stationNm === "의왕톨게이트" ? "station-nm passed-station" : "station-nm";
+    const stationDisplay = `<span class="${stationClass}">${formatStationNm(arrival.stationNm)}</span>`;
 
-    // 시간 표시 (9분 이하면 초단위)
+    // 시간 표시 (10분 밑이면 초 단위)
     let timeDisplay;
-    if (arrival.remainMin <= 9 && arrival.predictTimeSec) {
+    if (arrival.predictTimeSec && arrival.predictTimeSec < 600) {
         const min = Math.floor(arrival.predictTimeSec / 60);
         const sec = arrival.predictTimeSec % 60;
         timeDisplay = `${min}:${String(sec).padStart(2, "0")}`;
@@ -373,63 +340,95 @@ function renderArrivalRow(arrival, transferStatus) {
 
     // 경합 클래스
     const racingClass = isRacing ? "racing" : "";
+    const feederClass = arrival.busNo === "3102" ? "feeder" : "";
 
     return `
-    <div class="arrival-row ${vehicleStatus.class} ${racingClass}">
-      <span class="bus-number" style="background-color: ${routeConfig.color}">${arrival.busNo}</span>
-      ${routeTag}
-      <span class="remain-time ${isSoon ? "soon" : ""}">${timeDisplay}</span>
-      ${stationDisplay}
-      <span class="seat-badge ${seatClass}">${seatDisplay}</span>
-      ${transferBadge}
-      <span class="vehicle-status">${vehicleStatus.icon} ${vehicleStatus.text}</span>
+    <div class="arrival-row ${vehicleStatus.class} ${racingClass} ${transferStatus || ""} ${feederClass}" onclick="this.querySelector('.arrival-bottom')?.classList.toggle('folded')">
+      <div class="arrival-top">
+        <div class="arrival-main">
+          <span class="bus-number" style="background-color: ${routeConfig.color}">${displayBusNo}</span>
+          ${routeTag}
+          <span class="remain-time ${isSoon ? "soon" : ""}">${timeDisplay}</span>
+          ${stationDisplay}
+          <span class="seat-badge ${seatClass}">${seatDisplay}</span>
+        </div>
+        <div class="arrival-extra">
+          ${(vehicleStatus.badgeParts || []).map(part => {
+            if (typeof part === 'string') {
+              return `<span class="vehicle-badge">${part}</span>`;
+            } else {
+              return `<span class="vehicle-badge ${part.class || ''}">${part.text}</span>`;
+            }
+          }).join("")}
+          ${plateLast4}
+        </div>
+      </div>
+      ${vehicleStatus.text ? `<div class="arrival-bottom folded">${vehicleStatus.text}</div>` : ""}
     </div>
   `;
 }
 
 // 차량 상태 판별
 function getVehicleStatus(arrival, vehicleInfo, favorite) {
-    // 찜한 차량
+    // 별표 차량 (JS_VEHICLE_INFO의 stars)
+    if (vehicleInfo.stars) {
+        return {
+            class: "grade-premium",
+            icon: "⭐".repeat(vehicleInfo.stars),
+            text: `${vehicleInfo.model || ''}<br>(${vehicleInfo.year || ''}) ${vehicleInfo.additionalMemo || ''}`.trim().replace(/\s+$/, ''),
+            badgeParts: ["⭐".repeat(vehicleInfo.stars)],
+        };
+    }
+
+    // 찜한 차량 (기존 FAVORITES)
     if (favorite) {
         return {
             class: "grade-premium",
             icon: "⭐".repeat(favorite.rating),
             text: favorite.note,
+            badgeParts: ["⭐".repeat(favorite.rating)],
         };
     }
 
     // API lowPlate 기반 판별
     // 0:일반, 1:저상, 2:2층, 5:전세, 6:예약, 7:트롤리
     if (arrival.lowPlate === 5) {
-        return { class: "grade-charter", icon: "🚌", text: "전세" };
+        return { class: "grade-charter", icon: "🚌", text: "전세", badgeParts: ["🚌"] };
     }
 
     // DB에 없는 차량 (미등록)
     if (!vehicleInfo.route) {
-        return { class: "grade-unknown", icon: "❓", text: "미등록" };
+        return { class: "grade-unknown", icon: "🚫", text: "정보없음", badgeParts: ["🚫"] };
     }
 
-    // 다른 노선 차량
-    if (vehicleInfo.route !== arrival.busNo) {
-        return { class: "grade-borrowed", icon: "🔄", text: `${vehicleInfo.route}차` };
-    }
+    // 차량 정보 표시: (연도.월) 차종...
+    const modelShort = vehicleInfo.model;
+    const prefix = vehicleInfo.route === "예비차량" ? "(예비) " : "";
+    let text = `${modelShort}<br>(${vehicleInfo.year}) ${vehicleInfo.additionalMemo || ''}`.trim();
 
-    // 연식 계산 (현재 26년 기준)
-    const yearNum = parseFloat(vehicleInfo.year);
-    if (yearNum && yearNum < 20) {
-        // 5년 이상
-        return {
-            class: "grade-old",
-            icon: "💀",
-            text: `${vehicleInfo.year} ${vehicleInfo.model}`,
-        };
+    // 배지 파트: 예비와 연.월 따로
+    const badgeParts = [];
+    if (vehicleInfo.route === "예비차량") {
+        badgeParts.push({ text: "예비", class: "reserve" });
     }
+    // 2층 배지
+    if (vehicleInfo.model.includes("2층")) {
+        badgeParts.push({ text: "2층", class: "double-decker" });
+    }
+    // 우등 배지
+    if (vehicleInfo.model.includes("우등")) {
+        badgeParts.push({ text: "우등", class: "premium" });
+    }
+    // 연도를 XX년식으로 변환
+    const yearNum = parseInt(vehicleInfo.year.split('.')[0]);
+    const yearText = `${yearNum}년식`;
+    badgeParts.push({ text: yearText, class: `year-${2000 + yearNum}` });
 
-    // 일반 차량
     return {
         class: "grade-normal",
         icon: "",
-        text: `${vehicleInfo.year} ${vehicleInfo.model}`,
+        text: text,
+        badgeParts: badgeParts,
     };
 }
 
@@ -439,11 +438,15 @@ function getSeatClass(seats) {
     // seats-unknown: -1 이하(정보 없음, 회색)
     // seats-low: 5석 이하(빨간색)
     // seats-medium: 6~10석(노란색)
-    // seats-high: 11석 이상(녹색)
+    // seats-high: 11~20석(녹색)
+    // seats-super-high: 21~30석(파란색)
+    // seats-very-high: 31석 이상(진한 녹색)
     if (seats < 0) return "seats-unknown";
     if (seats <= 5) return "seats-low";
     if (seats <= 10) return "seats-medium";
-    return "seats-high";
+    if (seats <= 20) return "seats-high";
+    if (seats <= 30) return "seats-super-high";
+    return "seats-very-high";
 }
 
 // 새로고침 - API 호출
@@ -544,7 +547,7 @@ function transformApiData(busArrivalList) {
         if (bus.predictTime1 !== "" && bus.predictTime1 !== undefined) {
             arrivals.push({
                 busNo: routeName,
-                plateNo: extractPlateNo(bus.plateNo1),
+                plateNo: bus.plateNo1 || extractPlateNo(bus.plateNo1),
                 remainMin: bus.predictTime1,
                 stationNm: bus.stationNm1 || "",
                 remainSeat: bus.remainSeatCnt1 ?? -1,
@@ -559,7 +562,7 @@ function transformApiData(busArrivalList) {
         if (bus.predictTime2 !== "" && bus.predictTime2 !== undefined) {
             arrivals.push({
                 busNo: routeName,
-                plateNo: extractPlateNo(bus.plateNo2),
+                plateNo: bus.plateNo2 || extractPlateNo(bus.plateNo2),
                 remainMin: bus.predictTime2,
                 stationNm: bus.stationNm2 || "",
                 remainSeat: bus.remainSeatCnt2 ?? -1,
@@ -572,7 +575,7 @@ function transformApiData(busArrivalList) {
     });
 
     // 도착 시간순 정렬
-    arrivals.sort((a, b) => a.remainMin - b.remainMin);
+    arrivals.sort((a, b) => (a.predictTimeSec || 0) - (b.predictTimeSec || 0));
     return arrivals;
 }
 
@@ -583,3 +586,17 @@ function extractPlateNo(plateNo) {
     const match = plateNo.match(/\d{4}$/);
     return match ? match[0] : plateNo.slice(-4);
 }
+
+// 업데이트 시간 포맷
+function formatUpdateTime(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return "방금 전";
+    if (diffMin < 60) return `${diffMin}분 전`;
+    const diffHour = Math.floor(diffMin / 60);
+    return `${diffHour}시간 전`;
+}
+
+// Global functions for onclick
+window.selectMyBusOption = selectMyBusOption;
