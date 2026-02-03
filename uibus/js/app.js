@@ -183,11 +183,11 @@ function renderMyBusSelector(myBusArrivals, routeName) {
 // 정류장 이름 포맷 (접두어 제거, 길이 제한)
 function formatStationNm(name) {
     if (!name) return "";
-    // (가상), (임시) 등 접두어 제거
-    let formatted = name.replace(/^\([^)]+\)\s*/, "");
-    // 10자 초과시 ... 처리
-    if (formatted.length > 10) {
-        formatted = formatted.substring(0, 9) + "…";
+    // (가상), (임시), (미정차), (경유) 등 모든 괄호 내용 제거
+    let formatted = name.replace(/\([^)]+\)/g, "").trim();
+    // 14자 초과시 ... 처리
+    if (formatted.length > 14) {
+        formatted = formatted.substring(0, 13) + "…";
     }
     return formatted;
 }
@@ -328,14 +328,12 @@ function renderArrivalRow(arrival, transferStatus) {
     const stationClass = arrival.stationNm === "의왕톨게이트" ? "station-nm passed-station" : "station-nm";
     const stationDisplay = `<span class="${stationClass}">${formatStationNm(arrival.stationNm)}</span>`;
 
-    // 시간 표시 (초 단위)
+    // 시간 표시 (10분 밑이면 초 단위)
     let timeDisplay;
     if (arrival.predictTimeSec && arrival.predictTimeSec < 600) {
         const min = Math.floor(arrival.predictTimeSec / 60);
         const sec = arrival.predictTimeSec % 60;
         timeDisplay = `${min}:${String(sec).padStart(2, "0")}`;
-    } else if (arrival.predictTimeSec >= 600) {
-        timeDisplay = `${Math.floor(arrival.predictTimeSec / 60)}분`;
     } else {
         timeDisplay = `${arrival.remainMin}분`;
     }
@@ -602,4 +600,3 @@ function formatUpdateTime(date) {
 
 // Global functions for onclick
 window.selectMyBusOption = selectMyBusOption;
-
