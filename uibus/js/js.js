@@ -2,7 +2,7 @@
 export const JS_VEHICLE_INFO = {
     2049: {
         company: "골든벨여행사",
-        route: "8155(우등)",
+        route: "8155(예약)",
         year: "",
         model: "우등, Wi-Fi",
         additionalMemo: "",
