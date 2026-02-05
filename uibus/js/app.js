@@ -293,8 +293,25 @@ function renderArrivalList(arrivals) {
 
 // 도착 정보 행 렌더링
 function renderArrivalRow(arrival, transferStatus) {
-    const routeConfig = ROUTE_CONFIG[arrival.busNo] || { color: "#e91e63" }; // 미등록 노선 핀크
-    const displayBusNo = arrival.busNo.replace(/\(예약\)/g, '+');
+    // 예약 여부 확인 및 기본 노선 번호 추출
+    const isReserved = arrival.busNo.includes("(예약)");
+    const baseRouteNo = arrival.busNo.replace(/\(예약\)$/, "");
+
+    // 표시용 노선 번호 (예약이면 +)
+    const displayBusNo = isReserved ? baseRouteNo + '+' : baseRouteNo;
+
+    // 노선 설정: 예약 노선은 "(예약)" 포함된 설정 우선, 없으면 기본 노선 설정 사용
+    let routeConfig = ROUTE_CONFIG[arrival.busNo]; // 예: "7780(예약)"
+    if (!routeConfig) {
+        routeConfig = ROUTE_CONFIG[baseRouteNo]; // 예: "7780"
+    }
+    if (!routeConfig) {
+        routeConfig = { color: "#e91e63" }; // 미등록 노선 핑크
+    }
+
+    // 예약 태그 표시: 모든 예약 노선은 + 표시만, 별도 태그 없음
+    const routeTag = "";
+
     const normalizedPlateNo = normalizeVehicleId(arrival.plateNo).replace(/^[^0-9a-z]*/, '');
     const vehicleInfo = VEHICLE_INFO[normalizedPlateNo] || VEHICLE_INFO[arrival.plateNo.replace(/[^0-9]/g, '')] || {};
     const favorite = FAVORITES[arrival.plateNo];
@@ -318,11 +335,6 @@ function renderArrivalRow(arrival, transferStatus) {
     // 좌석 표시
     const seatDisplay = arrival.remainSeat < 0 ? "-" : arrival.remainSeat + "석";
     const seatClass = getSeatClass(arrival.remainSeat);
-
-    // 노선 타입 태그
-    const routeTag = routeConfig.tag
-        ? `<span class="route-tag">${routeConfig.tag}</span>`
-        : "";
 
     // 정류장 이름 표시
     const stationClass = arrival.stationNm === "의왕톨게이트" ? "station-nm passed-station" : "station-nm";
@@ -536,10 +548,11 @@ function transformApiData(busArrivalList) {
     const arrivals = [];
 
     busArrivalList.forEach(bus => {
-        const routeName = String(bus.routeName).replace(/\(예약\)$/, "");
+        const routeName = String(bus.routeName); // (예약) 포함된 이름 그대로 유지
 
-        // 관심 노선만 필터링
-        if (!INTERESTED_ROUTES.includes(routeName)) {
+        // 관심 노선만 필터링 (예약 포함)
+        const baseRouteName = routeName.replace(/\(예약\)$/, "");
+        if (!INTERESTED_ROUTES.includes(baseRouteName)) {
             return;
         }
 
