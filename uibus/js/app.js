@@ -505,23 +505,6 @@ async function fetchAllArrivals() {
             LIVE_ARRIVAL_INFO[key] = arrivals;
         });
     await Promise.all(promises);
-
-    // 테스트용 8155(예약) 데이터 inject
-    if (LIVE_ARRIVAL_INFO["1002"]) {
-        LIVE_ARRIVAL_INFO["1002"].push({
-            busNo: "8155(예약)",
-            plateNo: "99가2049",
-            remainMin: 1,
-            stationNm: "테스트",
-            remainSeat: 10,
-            lowPlate: 0,
-            isDoubleDecker: false,
-            isCharter: false,
-            predictTimeSec: 60,
-        });
-        // 시간순 재정렬
-        LIVE_ARRIVAL_INFO["1002"].sort((a, b) => (a.predictTimeSec || 0) - (b.predictTimeSec || 0));
-    }
 }
 
 // 관심 노선 목록
@@ -639,3 +622,4 @@ function formatUpdateTime(date) {
 
 // Global functions for onclick
 window.selectMyBusOption = selectMyBusOption;
+
