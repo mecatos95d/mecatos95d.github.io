@@ -313,7 +313,11 @@ function renderArrivalRow(arrival, transferStatus) {
     const routeTag = "";
 
     const normalizedPlateNo = normalizeVehicleId(arrival.plateNo).replace(/^[^0-9a-z]*/, '');
-    const vehicleInfo = VEHICLE_INFO[normalizedPlateNo] || VEHICLE_INFO[arrival.plateNo.replace(/[^0-9]/g, '')] || {};
+    const digitsOnly = arrival.plateNo.replace(/[^0-9]/g, '');
+    const last4Digits = arrival.plateNo.replace(/[^0-9]/g, '').slice(-4); // 전세차 조회용
+
+    // VEHICLE_INFO 조회: 1) 정규화된 번호, 2) 숫자만, 3) 뒷 4자리 (전세차용)
+    const vehicleInfo = VEHICLE_INFO[normalizedPlateNo] || VEHICLE_INFO[digitsOnly] || VEHICLE_INFO[last4Digits] || {};
     const favorite = FAVORITES[arrival.plateNo];
     const isSoon = arrival.remainMin <= 3;
 
@@ -384,10 +388,15 @@ function renderArrivalRow(arrival, transferStatus) {
 function getVehicleStatus(arrival, vehicleInfo, favorite) {
     // 별표 차량 (JS_VEHICLE_INFO의 stars)
     if (vehicleInfo.stars) {
+        const yearPart = vehicleInfo.year ? `(${vehicleInfo.year})` : '';
+        const modelPart = vehicleInfo.model || '';
+        const memoPart = vehicleInfo.additionalMemo || '';
+        const textParts = [modelPart, yearPart, memoPart].filter(p => p).join(' ');
+
         return {
             class: "grade-premium",
             icon: "⭐".repeat(vehicleInfo.stars),
-            text: `${vehicleInfo.model || ''}<br>(${vehicleInfo.year || ''}) ${vehicleInfo.additionalMemo || ''}`.trim().replace(/\s+$/, ''),
+            text: textParts.replace(/\s+/g, ' ').trim(),
             badgeParts: ["⭐".repeat(vehicleInfo.stars)],
         };
     }
@@ -496,6 +505,23 @@ async function fetchAllArrivals() {
             LIVE_ARRIVAL_INFO[key] = arrivals;
         });
     await Promise.all(promises);
+
+    // 테스트용 8155(예약) 데이터 inject
+    if (LIVE_ARRIVAL_INFO["1002"]) {
+        LIVE_ARRIVAL_INFO["1002"].push({
+            busNo: "8155(예약)",
+            plateNo: "99가2049",
+            remainMin: 1,
+            stationNm: "테스트",
+            remainSeat: 10,
+            lowPlate: 0,
+            isDoubleDecker: false,
+            isCharter: false,
+            predictTimeSec: 60,
+        });
+        // 시간순 재정렬
+        LIVE_ARRIVAL_INFO["1002"].sort((a, b) => (a.predictTimeSec || 0) - (b.predictTimeSec || 0));
+    }
 }
 
 // 관심 노선 목록
