@@ -18,7 +18,7 @@ export const JS_VEHICLE_INFO = {
     },
     7747: {
         company: "골든벨여행사",
-        route: "전세",
+        route: "7780",
         year: "",
         model: "",
         additionalMemo: "",
