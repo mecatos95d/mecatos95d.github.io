@@ -23,4 +23,11 @@ export const JS_VEHICLE_INFO = {
         model: "",
         additionalMemo: "",
     },
+    7330: {
+        company: "현대항공여행사",
+        route: "7790",
+        year: "",
+        model: "무난한 일반",
+        additionalMemo: "",
+    },
 };
