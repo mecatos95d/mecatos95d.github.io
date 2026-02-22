@@ -16,6 +16,14 @@ export const JS_VEHICLE_INFO = {
         additionalMemo: "",
         stars: 2,
     },
+    3241: {
+        company: "골든벨여행사",
+        route: "8156",
+        year: "",
+        model: "우등, Wi-Fi",
+        additionalMemo: "",
+        stars: 3,
+    },
     7747: {
         company: "골든벨여행사",
         route: "7780",
